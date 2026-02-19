@@ -43,7 +43,7 @@ def index(request):
 ---
 # Argumentos
 - Como é uma função, a *view* pode receber argumentos;
-- Os argumentos vêm depois do `request`;
+- Os argumentos extras vêm depois do `request`;
 - Ex.: `def minha_view(request, usuario)`;
 - Como passar esses argumentos?
 
@@ -72,7 +72,7 @@ def fotos(request, id_foto):
 # URLs no template
 - Para gerar as URLs com os argumentos nos templates fazemos:
 ```django
-<a href="{% url 'fotos' id_foto %}"
+<a href="{% url 'fotos' id_foto %}">Fotos</a>
 ```
 - Se houver mais de um argumento:
 ```django

@@ -169,7 +169,7 @@ python manage.py runserver
 - Crie um *fork* do repositório das tarefas da disciplina (link no GSA);
 - Clone **o seu repositório** (fork) usando o VSCode;
 - Dentro desse repositório configure o *venv* de acordo com as aulas passadas;
-- Crie o arquivo `.gitignore` (veja o [tutorial](https://dvcirilo-ifrn.github.io/psi/tutoriais/));
+- Crie o arquivo `.gitignore` (veja o [tutorial](https://dvcirilo-ifrn.github.io/pweb/tutoriais/));
 - Instale o Django;
 - Crie o arquivo `requirements.txt`;
 - Crie uma pasta chamada `tarefa01`;

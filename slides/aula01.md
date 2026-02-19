@@ -24,7 +24,13 @@ img {
 ---
 # Ementa
 
-Fundamentos do desenvolvimento de sistemas voltados para a Internet. Desenvolvimento de sistemas web com o apoio de framework. Utilização de persistência de dados através de mapeamento objeto-relacional. Uso de cookies e sessões. Testes de aplicações web. Tópicos relacionados ao desempenho e segurança de aplicações Web.
+- Fundamentos do desenvolvimento de sistemas voltados para a Internet.
+- Desenvolvimento de sistemas web com o apoio de framework.
+- Utilização de persistência de dados através de mapeamento objeto-relacional.
+- Uso de cookies e sessões.
+- Testes de aplicações web.
+- Tópicos relacionados ao desempenho e segurança de aplicações Web.
+- [Ementa Oficial (SUAP)](https://suap.ifrn.edu.br/ppc/planodisciplinappc/1644/visualizar/)
 
 ---
 # Objetivos
@@ -45,18 +51,22 @@ Fundamentos do desenvolvimento de sistemas voltados para a Internet. Desenvolvim
    - Revisão dos protocolos HTTP e HTTPS
      - Mensagens de requisição e resposta
      - Métodos, parâmetros e códigos de retorno
+
+---
+# Conteúdos
+
 2. Framework para o desenvolvimento de aplicações web
    - Introdução à linguagem de desenvolvimento web
    - Introdução ao estilo arquitetural MVC (ou equivalente)
    - Desenvolvimento de componentes de visão
      - Temas e templates: CSS Frameworks
+   - Desenvolvimento de componentes de controle
+     - Controle de estados (cookies e sessões)
 
 ---
 # Conteúdos
 
 2. Framework para o desenvolvimento de aplicações web *(cont.)*
-   - Desenvolvimento de componentes de controle
-     - Controle de estados (cookies e sessões)
    - Desenvolvimento de componentes de modelo
      - Persistência de dados em mecanismo de mapeamento objeto-relacional
      - Listagem de dados com filtros
@@ -89,25 +99,27 @@ Fundamentos do desenvolvimento de sistemas voltados para a Internet. Desenvolvim
 
 ---
 # Avaliação
-## Unidade 01
-    - Quiz teórico (50pts)
-    - Tarefas práticas (50pts)
 
-## Unidade 02
-    - Quiz teórico (25pts)
-    - Tarefas práticas (25pts)
-    - Projeto (50pts)
+- **Unidade 01**
+    - Quiz teórico (40pts)
+    - Tarefas práticas (60pts)
+
+- **Unidade 02**
+    - Quiz teórico (40pts)
+    - Tarefas práticas (30pts)
+    - Projeto (30pts)
 
 ---
 # Avaliação
-## Unidade 03
-    - Quiz teórico (50pts)
-    - Tarefas práticas (50pts)
 
-## Unidade 04
-    - Quiz teórico (25pts)
-    - Tarefas práticas (25pts)
-    - Projeto (50pts)
+- **Unidade 03**
+    - Quiz teórico (40pts)
+    - Projeto Integrador (60pts)
+
+- **Unidade 04**
+    - Quiz teórico (40pts)
+    - Tarefas práticas (30pts)
+    - Projeto Final (30pts)
 
 ---
 # <!--fit--> Dúvidas? 🤔

@@ -4,7 +4,7 @@ size: 4:3
 marp: true
 paginate: true
 _paginate: false
-title: Aula 08: Models
+title: Aula 08: Templates
 author: Diego Cirilo
 
 ---
@@ -15,521 +15,346 @@ img {
 }
 </style>
 
-# <!-- fit --> Programação de Sistemas para Internet
+# <!-- fit --> Programação de Aplicação Web
 
 ### Prof. Diego Cirilo
 
-**Aula 08**: Models
+**Aula 08**: Templates
 
 ---
-# Dados do sistema
-- Como armazenar os dados do sistema?
-- Conteúdo, dados de usuário, etc.;
-- SGBD - Sistema de Gerenciamento de Banco de Dados;
-- SQL - *Structured Query Language*.
+# Templates
+- As *views* podem retornar páginas estáticas, mas qual seria a vantagem?
+- Templates permitem a substituição dinâmica de dados em uma página HTML;
+- Isso é possível através de *tags*;
+- A estrutura é de um HTML normal, com *tags* extras.
 
 ---
-# ORM
-- Gerenciar comandos SQL pode ser complicado;
-- ORM - *Object Relational Mapping*;
-- Podemos tratar os dados do BD como objetos.
+<style scoped>section { font-size: 24px; }</style>
+<style scoped>pre { font-size: 16px; }</style>
+# Templates
+- O Django por padrão procura os templates na pasta `templates` em cada *app*;
+- É possível configurar outras pastas no arquivo `settings.py`;
+- Ex. uma pasta chamada `templates` na raiz do projeto:
+```python
+TEMPLATES = [
+    {
+        ...
+        "DIRS": [BASE_DIR / "templates"],
+        ...
+    },
+]
+```
+- O Django irá buscar primeiro nessa pasta e depois nas pastas `templates` de cada *app*;
+- Essa pasta é útil para criar templates que serão usados em mais de um *app*.
 
 ---
-# Models Django
-- No Django o ORM é feito nos *Models* (`models.py`);
-- Nele definimos os modelos de dados, seus campos e comportamento;
-- Cada modelo é uma classe Python que herda de `django.db.models.Model`;
-- Cada atributo de um model representa um campo no BD;
-- O Django se responsabiliza por gerenciar as tabelas, *queries*, etc.;
-- O Django também cria campos automaticamente, como ID.
+<style scoped>pre { font-size: 16px; }</style>
+<style scoped>section { font-size: 22px; }</style>
+# Templates
+- Para evitar conflitos, o Django recomenda criar uma pasta com o nome do *app* dentro de cada pasta de *templates*. Ex.:
+```
+meuprojeto
+├── ...
+├── config
+│   ├── ...
+├── meuapp
+│   ├── ...
+│   ├── templates
+│   │   └── meuapp
+│   │       ├── base.html
+│   │       └── index.html
+│   └── ...
+├── outroapp
+│   ├── ...
+│   ├── templates
+│   │   └── outroapp
+│   │       ├── base.html
+│   │       └── index.html
+│   └── ...
+└── ...
+```
+- Nesse caso, na função `render` colocamos o caminho relativo para o *template*: `render(request, "meuapp/index.html")`.
+
+---
+# Tags
+
+- `{{ variáveis }}`;
+- `{% tags/funções %}`;
+- [Lista das tags](https://docs.djangoproject.com/en/5.0/ref/templates/builtins/#ref-templates-builtins-tags)
+
+---
+# Exemplos
+- HTML:
+```html
+<ul>
+    <li>Batata</li>
+    <li>Farinha</li>
+    <li>Queijo</li>
+</ul>
+```
+- Template Django:
+```django
+<ul>
+    {% for item in lista_compras %}
+        <li>{{ item  }}</li>
+    {% endfor %}
+</ul>
+
+```
+
+---
+# Tags
+- For:
+```django
+{% for variavel in lista %}
+    ...{{ variavel }}...
+{% endfor %}
+```
+- If:
+```django
+{% if condicao %}
+    ...verdadeiro
+{% elif outracondicao %}
+    ...verdadeiro
+{% else %}
+    ...falso
+{% endif %}
+```
+
+---
+# Contexto
+- De onde vem os dados para o template?
+- R. da *view*!
+- A função `render` aceita (além de `request` e o nome do *template*) mais um parâmetro: um dicionário com dados para o template;
+- Dicionário: `{"chave": "valor", "outrachave": "outrovalor"}`;
+- Esse dicionário é normalmente chamado de contexto ou `context`.
+
+---
+# Contexto
+- Na *view*:
+```py
+def index(request):
+    dados_usuario = {"nome": "Michael Douglas", "idade": 23}
+    return render(request, "index.html", dados_usuario)
+```
+- No *template*:
+```html
+...
+<p>Nome: {{ nome }}</p>
+<p>Idade: {{ idade }}</p>
+...
+```
+
+---
+# Contexto
+- Para passar vários dados podemos utilizar listas de dicionários.
+- Ex.
+```py
+def index(request):
+    lista_usuarios = [
+        {"nome": "Michael Douglas", "idade": 23},
+        {"nome": "James Wilson", "idade": 55},
+        {"nome": "Peter Parker", "idade": 22},
+    ]
+
+    context = {
+        "usuarios": lista_usuarios,
+    }
+    return render(request, "index.html", context)
+```
+---
+# Contexto
+- No *template*:
+```django
+...
+{% for usuario in usuarios %}
+    <p>Nome: {{ usuario.nome }}</p>
+    <p>Idade: {{usuario.idade }}</p>
+{% endfor %}
+...
+```
+
+---
+<style scoped>section { font-size: 24px; }</style>
+# Tarefa 03
+- Crie uma nova pasta `tarefa03`
+- Entre na pasta e crie novo projeto Django, e também um novo app chamado `app`
+- Crie uma *view* e um *template* `index`. Configure as *urls* para `''`.
+- Crie uma *view* e um *template* `usuarios`. Configure as *urls* para `/usuarios`
+- Na sua *view* de usuários, crie uma lista de 5 dicionários, cada dicionário deve ter os seguintes dados:
+    - Nome, matrícula, idade, cidade
+- Crie dados fictícios para esses 5 usuários.
+- Crie um *template* que consiga apresentar os dados de todos os usuários listados
+- Teste o sistema e faça o commit/push quando tiver funcionando.
+
+---
+# Herança de templates
+- Páginas web repetem muito código
+- Ex. um menu que aparece em todas as páginas, o *header* e o *footer*
+- Os templates podem "importar" pedaços de outros templates
+- Usamos um template base com o que deve ser padrão em todas as páginas
+- As outras páginas apenas substituem partes do template base.
+
+---
+# Herança de templates
+- Na página base:
+```django
+{% block nome-do-bloco %}
+    <conteúdo padrão do bloco>
+{% endblock %}
+```
+- Na página que herda:
+```django
+{% extends "pagina-base.html" %}
+...
+{% block nome-do-bloco %}
+    <novo conteúdo do bloco>
+{% endblock %}
+```
+---
+# Herança de templates
+- A *tag* `extends` deve ser a primeira do documento.
+- É possível criar vários `block`s no mesmo template, sem repetir seus nomes.
+- O conteúdo padrão do `block` pai pode ser acessado com `{{ block.super }}`
 
 ---
 # Exemplo
-```py
-from django.db import models
-
-class Pessoa(models.Model):
-    nome = models.CharField(max_length=30)
-    sobrenome = models.CharField(max_length=30)
+- `base.html`:
+```django
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Título base do site{% endblock %}</title>
+  </head>
+  <body>
+    {% block content %}
+      <p>Conteúdo do site</p>
+    {% endblock %}
+  </body>
+</html>
 ```
-```sql
-CREATE TABLE myapp_pessoa (
-    "id" bigint NOT NULL PRIMARY KEY GENERATED BY DEFAULT AS IDENTITY,
-    "nome" varchar(30) NOT NULL,
-    "sobrenome" varchar(30) NOT NULL
-);
+
+---
+# Exemplo
+- `pagina.html`
+```django
+{% extends "base.html" %}
+{% block title %}{{ block.super }} - Nome da página{% endblock %}
+{% block content %}
+<div class="classe">
+  <h1> Conteúdo do meu site </h1>
+</div>
+{% endblock %}
 ```
 
 ---
-# Alguns tipos de dados
-
-- CharField: Textos curtos (nomes, títulos);
-- TextField: Textos longos (descrições, artigos);
-- IntegerField: Números inteiros (idades, quantidades);
-- FloatField: Números decimais (preços, médias);
-- BooleanField: Valores booleanos (Verdadeiro/Falso);
-- DateField: Datas (aniversários, datas de criação);
-- DateTimeField: Datas e horas (eventos, logs);
-- [Referência](https://docs.djangoproject.com/pt-br/5.1/ref/models/fields/#model-field-types).
+# Arquivos Estáticos
+- Os arquivos estáticos não ficam dentro de `templates`
+- O motivo é: os `templates` não são páginas HTML! Não ficam públicos para os clientes.
+- Os `templates` são renderizados e então disponibilizados pelo servidor.
+- Os arquivos estáticos, como imagens, JS e CSS são disponibilizados diretamente pelo servidor web.
+- O caminho padrão do Django é a pasta `static` dentro do *app*
 
 ---
-# Alguns tipos de dados
-
-- EmailField: Endereços de e-mail (validação automática);
-- FileField: Arquivos;
-- ImageField: Imagens;
-- ForeignKey: Relacionamentos um-para-muitos;
-- ManyToManyField: Relacionamentos muitos-para-muitos;
-- OneToOneField: Relacionamentos um-para-um;
-- [Referência](https://docs.djangoproject.com/pt-br/5.1/ref/models/fields/#model-field-types).
-
----
-# Alguns atributos dos campos
-- `max_length` - tamanho máximo para texto;
-- `null` - se vazio usa o `NULL` do SGBD;
-- `blank` - o campo pode ser vazio se `True`, por padrão é `False`;
-- `default` - valor padrão;
-- `unique` - se `True` o valor deve ser único na tabela;
-- `choices` - lista de valores possíveis.
+# Arquivos Estáticos
+- Usamos `{% load static %}` no início da página.
+- Usamos `{% static 'nomedoarquivo.etc' %}` no lugar do nome do arquivo.
+- Os caminhos são relativos ao diretório `static`.
+- Ex.
+```django
+<img src="{% static 'cat.jpg' %}" alt="Foto do gato">
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
+```
 
 ---
-# *FileField* e *ImageField*
-- Sobem arquivos para uma pasta no servidor;
-- Segurança!
-- No BD fica salvo o endereço o arquivo;
-- Para *ImageField* é necessário instalar o pacote `pillow`;
-- Os arquivos são salvos na pasta configurada em `MEDIA_ROOT`;
-- O link para acesso aos arquivos fica configurado em `MEDIA_URL`;
+# Arquivos Estáticos
+- Devemos ter cuidado com conflitos de nome;
+- Se dois arquivos estáticos tem o mesmo nome em 2 apps diferentes o comportamento pode ser inesperado;
+- Uma solução é usar *namespaces*, adicionando identificadores ao nome do arquivo ou criando outro diretório, assim como sugerido para os templates.
 
 ---
-# *FileField* e *ImageField*
-- Esses diretórios não são configurados por padrão;
-- Devemos adicionar no `settings.py`:
+<style scoped>pre { font-size: 16px; }</style>
+<style scoped>section { font-size: 24px; }</style>
+# Arquivos Estáticos - Exemplo
+```
+meuprojeto
+├── ...
+├── config
+│   ├── ...
+├── meuapp
+│   ├── ...
+│   ├── static
+│   │   └── meuapp
+│   │       ├── foto.jpg
+│   │       └── banner.jpg
+│   └── ...
+├── outroapp
+│   ├── ...
+│   ├── static
+│   │   └── outroapp
+│   │      ├── foto.jpg
+│   │      └── banner.jpg
+│   └── ...
+└── ...
+```
+- Nesse caso, na tag `static` colocamos o caminho relativo para o arquivo: `{% static 'meuapp/foto.jpg' %}`.
+
+---
+# Arquivos Estáticos
+- É muito comum que alguns arquivos estáticos, como CSS/JS sejam usados por todos os apps do projeto
+- Podemos criar uma pasta global para esses arquivos, por exemplo na raiz do projeto.
+- Adicionamos em `settings.py`:
 ```python
-MEDIA_URL = "media/"
-MEDIA_ROOT = BASE_DIR / "media"
-```
-
----
-# *FileField* e *ImageField*
-- No `urls.py` (apenas durante o desenvolvimento!):
-```python
-# adicionar no inicio do arquivo:
-from django.conf import settings
-from django.conf.urls.static import static
-
-urlpatterns = [
-    ..., # importante acabar com vírgula!
+STATICFILES_DIRS = [
+    BASE_DIR / "static", # pasta static na raiz do projeto
 ]
-# concatena a lista acima com o resultado de static()
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 ```
 
 ---
-# *FileField* e *ImageField*
-- Atributo `upload_to`:
-    - diretório dentro de `MEDIA_ROOT`;
-    - permite organizar melhor os arquivos;
-```python
-class Perfil(models.Model):
-    documento = FileField(upload_to="documentos/")
-    avatar = ImageField(upload_to="avatars/")
+# URLs/Links
+- É possível escrever os links diretamente:
 ```
-
----
-# Relacionamentos
-- Relacionam modelos;
-- Recebem como argumentos o nome da classe relacionada;
-- ForeignKey: chave estrangeira (um-para-vários);
-- ManyToManyField: muitos-para-muitos;
-- OneToOneField: um-para-um.
-
----
-# Relacionamentos
-- `on_delete` - define o que ocorre quando o objeto é removido;
-- `on_delete=models.CASCADE` - deleta os objetos relacionados junto;
-- `on_delete=models.SET_NULL` - escreve `NULL`;
-- `on_delete=models.PROTECT` - impede a remoção enquanto houver dados relacionados;
-- [Referência](https://docs.djangoproject.com/pt-br/5.1/ref/models/fields/#django.db.models.ForeignKey.on_delete).
-
----
-# Exemplos
-- Um pra um:
-```python
-class Pessoa(models.Model):
-    nome = models.CharField(max_length=100)
-    cpf = models.CharField(max_length=11, unique=True)
-
-class DadosPessoais(models.Model):
-    pessoa = models.OneToOneField(Pessoa, on_delete=models.CASCADE)
-    data_nascimento = models.DateField()
+<a href="/index">Página Inicial</a>
 ```
-
----
-# Exemplos
-- Um pra vários:
-```python
-class Pessoa(models.Model):
-    nome = models.CharField(max_length=100)
-    cpf = models.CharField(max_length=11, unique=True)
-
-class Veiculo(models.Model):
-    pessoa = models.ForeignKey(Pessoa, on_delete=models.PROTECT)
-    placa = models.CharField(max_length=7)
-    modelo = models.CharField(max_length=50)
+- Também é possível usar os templates:
 ```
-
----
-# Exemplos
-- Vários pra vários:
-```python
-class Pessoa(models.Model):
-    nome = models.CharField(max_length=100)
-    cpf = models.CharField(max_length=11, unique=True)
-
-class Empresa(models.Model):
-    socios = models.ManyToManyField(Pessoa)
-    nome = models.CharField(max_length=50)
-    cnpj = models.CharField(max_length=14, unique=True)
+<a href="{% url 'index' %}">Página Inicial</a>
 ```
+- Usamos o mesmo `name` definido nos arquivos `urls.py`.
 
 ---
-# Exemplos
-- Vários pra vários (com tabela intermediária):
-```python
-class Pessoa(models.Model):
-    nome = models.CharField(max_length=100)
-    cpf = models.CharField(max_length=11, unique=True)
-
-class Empresa(models.Model):
-    socios = models.ManyToManyField(Pessoa, through="Socio")
-    nome = models.CharField(max_length=50)
-    cnpj = models.CharField(max_length=14, unique=True)
-
-class Socio(models.Model):
-    pessoa = ForeignKey(Pessoa, on_delete=models.CASCADE)
-    empresa = ForeignKey(Pessoa, on_delete=models.CASCADE)
-    data_entrada = DateField() # campos extras
-    data_saida = DateField() # campos extras
-```
-
----
-# Choices
-<style scoped>pre { font-size: 18px; }</style>
-- Lista de valores que um campo pode assumir;
-- Validação automática e consistência;
-```python
-class Usuario(models.Model):
-    ALUNO = "AL"
-    PROFESSOR = "PR"
-    MONITOR = "MO"
-    TIPOS = {
-        ALUNO: "Aluno",
-        PROFESSOR: "Professor",
-        MONITOR: "Monitor",
-    }
-
-    nome = models.CharField(max_length=100)
-    tipo = models.CharField(max_length=2, choices=TIPOS, default=ALUNO)
-```
-
----
-# Choices
-- É possível acessar com `Usuario.ALUNO`, etc;
-- Ex.
-```python
-from .models import Usuario
-...
-if usuario.tipo == Usuario.ALUNO:
-    print("O usuário é aluno.")
-```
-
----
-# Classe Meta
-- Subclasse que permite algumas informações extras;
-- Ex.
-    - `verbose_name`
-    - `verbose_name_plural`
-    - `ordering`
--[Referência](https://docs.djangoproject.com/en/5.1/ref/models/options/#model-meta-options)
-
----
-<style scoped>section { font-size: 26px; }</style>
-# Métodos
-- Como qualquer classe, é possível adicionar métodos aos models;
-- Esses métodos podem tratar dados, retornar informações processadas, etc;
-- Ex.: um método que retorna o `nome_completo` a partir dos campos `nome` e `sobrenome`;
-- Existem alguns métodos padrão que também é possível sobrescrever;
-- Ex. `__str__` retorna a string que será impressa quando fazemos um `print` em um objeto dessa classe;
-- Para métodos que funcionem como atributos (sem precisar chamar com `()`) usamos o *decorator* `@property`.
-
----
-# Métodos
-- Ex.:
-```python
-class Pessoa(models.Model):
-    nome = models.CharField(max_length=100)
-    sobrenome = models.CharField(max_length=100)
-
-    class Meta:
-        ordering = ["sobrenome"] # retorna os resultados ordenados pelo sobrenome
-
-    def __str__(self):
-        return self.nome
-
-    @property
-    def nome_completo(self):
-        return f"{self.nome} {self.sobrenome}"
-
-```
-
----
-# Acessando dados dos Models
-- A *view* é responsável por acessar os dados;
-- É possível fazer *queries* através do objeto do Model:
-    - `Model.objects.all()` - retorna *tudo*;
-    - `Model.objects.filter()` - permite *filtrar* os dados;
-    - `Model.objects.get(pk=4)` - seleciona um objeto específico;
-- Retornam `QuerySets`;
-- Os resultados podem ser enviados para o template no `context`.
-
----
-# Filter
-- Parecido com `WHERE` do SQL;
-- Padrão:
-    - `campo__condicao=valor`
-- Ex. alunos com menos de 18 anos:
-    - `Alunos.objects.filter(idade__lte=18)`
-
----
-# Filter Lookups
-- `exact` - valor tem que ser exato;
-- `iexact` - exato mas *case-insensitive*;
-- `contains` - contém o valor;
-- `startswith` - começa com;
-- `endswith` - termina com;
-- [Referência](https://docs.djangoproject.com/en/5.1/ref/models/querysets/#field-lookups).
-
----
-# *Shortcuts*
-- O Django disponibiliza alguns atalhos;
-- Já usamos o `render` e o `redirect`
-- Para acesso aos models existem os:
-    - `get_object_or_404()`
-    - `get_list_or_404()`
-- Podemos passar um Model e uma query, se não houver resposta, o sistema redireciona para a página de erro 404;
-- [Referência](https://docs.djangoproject.com/en/5.1/topics/http/shortcuts/#module-django.shortcuts).
-
----
-# Exemplos
-- views.py:
-```python
-from django.shortcuts import render, get_object_or_404, get_list_or_404
-from .models import Livro
-
-def detalhar_livro(request, id_do_livro):
-    livro = get_object_or_404(Livro, id=id_do_livro)
-    context = {
-        'livro': livro,
-    }
-    return render(request, "detalhar_livro.html", context)
-
-def listar_livros(request):
-    livros = get_list_or_404(Livro)
-    context = {
-        'livros': livros,
-    }
-    return render(request, "listar_livros.html", context)
-```
-
----
-# Exemplos
-- Também é possível filtrar diretamente ou usar QuerySets:
+# URLs/Links - Exemplo
+- urls.py:
 ```python
 ...
-livros_com_M = get_list_or_404(Livro, titulo__startswith="M")
-
-livros_com_N = Livros.objects.filter(titulo__startswith="N") #queryset
-livros_com_N_do_autor1 = get_object_or_404(livros_com_N, autor=1)
+path('alunos/', views.alunos, name="estudantes"),
 ...
 ```
 
----
-# Configurações do BD
-- No arquivo `settings.py` há a seção `DATABASES`;
-- Podemos configurar diversos SGBDs;
-- Ex. MySQL, PostGres, SQLite, etc.;
-- Para desenvolvimento o SQLite é simples e exige menos configuração;
-- No sistema final devemos usar um SGBD mais completo (veremos em ICS).
-
----
-# Configurações de BD
-
-```
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-```
-
----
-# Migrations
-- Arquivo com comandos para o SGBD;
-- Permite recriar a estrutura (*schema*) do BD em qualquer computador;
-- Novas migrações devem ser criadas sempre que alteramos os dados em Models:
-    - `python manage.py makemigrations`
-- Para **aplicar** as *migrations*, ou seja, criar/alterar as tabelas no SGBD:
-    - `python manage.py migrate`
-- É importante sempre lembrar de criar/aplicar as migrations.
-
----
-# Fixtures
-- As *fixtures* permitem popular o banco de dados com dados iniciais;
-- São úteis para testes, protótipos e replicação de ambientes;
-- São arquivos em formatos como JSON, XML ou YAML contendo registros dos models;
-- São criadas e carregadas pelos comandos:
-```
-python manage.py dumpdata > dados.json
-python manage.py loaddata dados.json
-```
-
----
-# Fixtures
-- É possível exportar apenas apps específicos:
-```
-python manage.py dumpdata minha_app > dados.json
-```
-- Também podemos exportar apenas determinados models:
-```
-python manage.py dumpdata minha_app.Modelo > dados.json
-```
-
----
-# Fixtures
-- Para evitar conflitos comuns com apps do Django, use o parâmetro `--exclude`:
-```
-python manage.py dumpdata --exclude auth.permission --exclude contenttypes --exclude admin.logentry --exclude sessions > dados.json
-```
-- Isso exclui dados de apps padrão que geralmente causam erros ao usar `loaddata`;
-- Recomendado exportar apenas os dados criados na sua aplicação.
-
----
-# Django Shell
-- O Django possui um terminal interativo com acesso ao ambiente do projeto:
-```
-python manage.py shell
-```
-- É possível importar os models e interagir com o banco de dados;
-- Exemplo:
+- No template:
 ```python
-from minha_app.models import Pessoa
-Pessoa.objects.all()
+<a href="{% url 'estudantes' %}">Alunos do Curso</a>
 ```
 
 ---
-# Criando, Salvando e Editando Objetos
-- Criar e salvar um objeto:
-```python
-from minha_app.models import Pessoa
-p = Pessoa(nome="João", sobrenome="Silva")
-p.save()
-```
-
-- Criar diretamente:
-```python
-Pessoa.objects.create(nome="Maria", sobrenome="Oliveira")
-```
-
----
-# Criando, Salvando e Editando Objetos
-- Editar:
-```python
-p = Pessoa.objects.get(id=1)
-p.nome = "José"
-p.save()
-```
-- Excluir:
-```python
-p.delete()
-```
-- Consultar:
-```python
-Pessoa.objects.filter(sobrenome="Silva")
-```
+<style scoped>section { font-size: 20px; }</style>
+# Projeto 01
+- Utilizando seus conhecimentos de *webdesign*:
+    - Crie um site para divulgar uma equipe de algum esporte ou elenco de série, etc.
+    - O site deve ter 3 páginas: Início, Equipe/Elenco, Sobre;
+    - Início: informações gerais sobre a equipe/série, com imagens, histórico, etc;
+    - Equipe/Elenco: foto, nome, idade, posição e local de nascimento. Basta 11 atletas;
+    - Sobre: informações sobre o site, autores, etc.
+- O site deve ter um menu global e um *footer* com informações como *copyright* que devem aparecer em todas as páginas;
+- O site deve funcionar dentro do Django, usando um *template* base e os integrantes da equipe/elenco devem ser descritos em um dicionário na *view*;
+- As informações do site, autores, etc, também devem estar em um dicionário nas *views*;
+- Use o repositório modelo para fazer o upload do trabalho.
 
 ---
-# Django Admin
-- O Django foi pensado para facilitar o processo de desenvolvimento;
-- Um projeto Django já possui uma interface de administração pronta;
-- Para ativar, temos que:
-    - Adicionar os models ao arquivo `admin.py`;
-    - Criar um *superuser* do sistema;
-    - Executar as *migrations*.
+![](../img/css.gif)
 
 ---
-# Django Admin
-```
-from django.contrib import admin
 
-from .models import Tarefa
-
-admin.site.register(Tarefa)
-```
-
----
-# Django Admin
-- Para criar o *superuser*:
-    - `python manage.py createsuperuser`
-- Para criar as *migrations*:
-    - `python manage.py makemigrations`
-- Para executar as *migrations*:
-    - `python manage.py migrate`
-
----
-# Django Admin
-- Para configurar a língua do sistema (incluindo o *admin*):
-    - Altere `LANGUAGE_CODE` no `settings.py` para `pt-br`
-- Na listagem de tarefas aparece `Tarefas object(1)`, esse é o resultado do `print` em um objeto da classe `Tarefas`
-- Para imprimir algo mais interessante, escrevemos o método `__str__` para a classe `Tarefas`
-
-```py
-def __str__(self):
-    return self.nome
-```
-
----
-# Tarefa 04
-- Crie um site simples de lista de tarefas;
-- Cada tarefa deve ter: nome, status e prazo; (Model)
-- O cadastro das tarefas deve ser feito pelo Django Admin;
-- Diferencie as tarefas que estão atrasadas;
-    - Dica: use a biblioteca `datetime` do Python na view para passar a data atual no `context`:
-```
-from datetime import date
-
-...
-context['hoje'] = date.today()
-
-```
-
----
-# Tarefa 05
-- Crie um blog simples com duas views:
-    - index: lista de todos os posts com título, data e link da postagem;
-    - post/<id>: página com o conteúdo do post
-- O blog deve ter um *header* com o título e link para o index, e um *footer* com informações do desenvolvedor;
-- O conteúdo de cada postagem deve ser apenas uma imagem, um título, o texto e a data de publicação;
-- Todas essas informações devem existir no BD;
-- Crie um *superuser* e cadastre as postagens pela página de *admin*.
-
----
-# Projeto 02
-- Converta o Projeto 01 em um sistema dinâmico, usando os Models;
-- Crie os Models para cada um dos dicionários que você usou nas *views*;
-- Adicione esses models no Django Admin e cadastre todos os dados por lá;
-- O site deve funcionar do mesmo jeito do anterior (ou melhor!).
-
----
 # <!--fit--> Dúvidas? 🤔

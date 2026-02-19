@@ -4,7 +4,7 @@ size: 4:3
 marp: true
 paginate: true
 _paginate: false
-title: Aula 18: Customizando o Django Admin
+title: Aula 18: Class-Based Views
 author: Diego Cirilo
 
 ---
@@ -15,428 +15,727 @@ img {
 }
 </style>
 
-# <!-- fit --> Programação de Sistemas para Internet
+# <!-- fit --> Programação de Aplicação Web
 
 ### Prof. Diego Cirilo
 
-**Aula 18**: Customizando o Django Admin
+**Aula 18**: Class-Based Views (CBV)
 
 ---
-# Django Admin
-- Interface administrativa gerada automaticamente;
-- Permite CRUD completo dos models;
-- Útil para gerenciamento interno;
-- Altamente customizável através do `ModelAdmin`.
-
----
-# Registro Básico
+# Function-Based Views (FBV)
+- Até agora usamos apenas FBVs;
+- Views como funções que recebem `request` e retornam `response`;
 ```python
-from django.contrib import admin
+def lista_produtos(request):
+    produtos = Produto.objects.all()
+    return render(request, 'produtos/lista.html', {'produtos': produtos})
+```
+- Simples e diretas;
+- Funciona bem para todos os casos.
+
+---
+# Problema com FBVs
+- Muitas views seguem o mesmo padrão;
+- Listar objetos, exibir detalhes, criar, editar, deletar...
+- Repetimos muito código entre views similares;
+- Difícil reaproveitar lógica comum.
+
+---
+# Exemplo: Views de Listagem
+```python
+def lista_produtos(request):
+    produtos = Produto.objects.all()
+    return render(request, 'lista.html', {'produtos': produtos})
+
+def lista_categorias(request):
+    categorias = Categoria.objects.all()
+    return render(request, 'lista.html', {'categorias': categorias})
+
+def lista_pedidos(request):
+    pedidos = Pedido.objects.all()
+    return render(request, 'lista.html', {'pedidos': pedidos})
+```
+- Mesmo padrão, código repetido!
+
+---
+# Class-Based Views (CBV)
+- Views como classes ao invés de funções;
+- Permitem herança e reutilização de código;
+- Django oferece views genéricas prontas;
+- Menos código para operações comuns.
+
+---
+# CBV Básica
+```python
+from django.views import View
+
+class MinhaView(View):
+    def get(self, request):
+        return render(request, 'pagina.html')
+
+    def post(self, request):
+        # processa formulário
+        return redirect('sucesso')
+```
+- Métodos separados para cada verbo HTTP;
+- `get()`, `post()`, `put()`, `delete()`, etc.
+
+---
+# Registrando no urls.py
+```python
+from django.urls import path
+from .views import MinhaView
+
+urlpatterns = [
+    # FBV
+    path('fbv/', minha_funcao, name='fbv'),
+
+    # CBV - precisa do .as_view()
+    path('cbv/', MinhaView.as_view(), name='cbv'),
+]
+```
+- O método `.as_view()` converte a classe em uma view.
+
+---
+# FBV vs CBV Simples
+```python
+# FBV
+def minha_view(request):
+    if request.method == 'POST':
+        # processa POST
+        return redirect('sucesso')
+    return render(request, 'pagina.html')
+
+# CBV
+class MinhaView(View):
+    def get(self, request):
+        return render(request, 'pagina.html')
+
+    def post(self, request):
+        return redirect('sucesso')
+```
+
+---
+# Views Genéricas
+- Django oferece classes prontas para operações comuns;
+- Basta configurar alguns atributos;
+- Muito menos código!
+- Principais:
+    - `ListView` - listar objetos
+    - `DetailView` - exibir um objeto
+    - `CreateView` - criar objeto
+    - `UpdateView` - editar objeto
+    - `DeleteView` - deletar objeto
+
+---
+# Customização por Herança
+- CBVs usam **herança** para customização;
+- Duas formas de alterar comportamento:
+    1. **Atributos de classe**: configurações simples
+    2. **Reescrita de métodos** (*override*): lógica personalizada
+- Essa é a metodologia padrão das CBVs do Django.
+
+---
+# Reescrita de Métodos (*Override*)
+- Cada CBV tem métodos que podemos reescrever;
+- Chamamos `super()` para manter o comportamento original;
+```python
+class ProdutoListView(ListView):
+    model = Produto
+
+    def get_context_data(self, **kwargs):
+        # Chama o método original da classe pai
+        context = super().get_context_data(**kwargs)
+        # Adiciona dados extras
+        context['titulo'] = 'Meus Produtos'
+        return context
+```
+
+---
+# Por que usar super()?
+- `super()` chama o método da classe pai (superclasse);
+- Mantém o comportamento padrão da view genérica;
+- Sem ele, perdemos funcionalidades importantes!
+```python
+# ERRADO - perde o contexto padrão (object_list, etc)
+def get_context_data(self, **kwargs):
+    return {'titulo': 'Produtos'}
+
+# CORRETO - mantém o contexto e adiciona mais
+def get_context_data(self, **kwargs):
+    context = super().get_context_data(**kwargs)
+    context['titulo'] = 'Produtos'
+    return context
+```
+
+---
+# Principais Métodos para Reescrever
+- `get_queryset()` - filtrar/ordenar objetos
+- `get_context_data()` - adicionar variáveis ao template
+- `form_valid()` - lógica após validação do form
+- `get_success_url()` - URL de redirecionamento dinâmica
+- `get_object()` - customizar busca do objeto
+
+---
+# ListView
+- Lista objetos de um model;
+```python
+from django.views.generic import ListView
 from .models import Produto
 
-# Registro simples
-admin.site.register(Produto)
+class ProdutoListView(ListView):
+    model = Produto
 ```
-- Usa configurações padrão;
-- Exibe apenas o `__str__` do objeto na listagem.
+- Busca todos os objetos;
+- Renderiza template `produto_list.html`;
+- Passa a lista como `object_list`.
 
 ---
-# ModelAdmin
-- Classe que define como o model aparece no Admin;
-- Permite customizar listagem, formulários, filtros, etc.
+# ListView - Customizando
 ```python
-from django.contrib import admin
-from .models import Produto
-
-class ProdutoAdmin(admin.ModelAdmin):
-    pass  # configurações padrão
-
-admin.site.register(Produto, ProdutoAdmin)
+class ProdutoListView(ListView):
+    model = Produto
+    template_name = 'produtos/lista.html'  # template customizado
+    context_object_name = 'produtos'       # nome da variável
+    ordering = ['-data_criacao']           # ordenação
+    paginate_by = 10                       # paginação
 ```
 
 ---
-# Decorator @admin.register
-- Forma alternativa e mais limpa de registrar:
-```python
-from django.contrib import admin
-from .models import Produto
+# ListView - Template
+```django
+<!-- produtos/lista.html -->
+<h1>Produtos</h1>
 
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco', 'estoque']
-```
-- Equivalente ao `admin.site.register(Produto, ProdutoAdmin)`
-
----
-# list_display
-- Define as colunas exibidas na listagem;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco', 'estoque', 'ativo']
-```
-- Aceita campos do model e métodos;
-- Torna a listagem mais informativa.
-
----
-# list_display com Métodos
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco', 'estoque_formatado']
-
-    def estoque_formatado(self, obj):
-        if obj.estoque > 10:
-            return f"✅ {obj.estoque} unidades"
-        return f"⚠️ {obj.estoque} unidades"
-
-    estoque_formatado.short_description = "Estoque"
+<ul>
+{% for produto in produtos %}
+    <li>
+        <a href="{% url 'produto_detalhe' produto.pk %}">
+            {{ produto.nome }} - R$ {{ produto.preco }}
+        </a>
+    </li>
+{% empty %}
+    <li>Nenhum produto cadastrado.</li>
+{% endfor %}
+</ul>
 ```
 
 ---
-# list_filter
-- Adiciona filtros na barra lateral;
+# ListView - Filtrando
 ```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'categoria', 'preco', 'ativo']
-    list_filter = ['categoria', 'ativo', 'data_criacao']
-```
-- Útil para filtrar por categoria, status, data, etc.
+class ProdutoListView(ListView):
+    model = Produto
+    template_name = 'produtos/lista.html'
+    context_object_name = 'produtos'
 
----
-# search_fields
-- Adiciona caixa de busca;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'categoria', 'preco']
-    search_fields = ['nome', 'descricao', 'categoria__nome']
-```
-- Busca em múltiplos campos;
-- Use `__` para campos de relacionamentos.
-
----
-# ordering
-- Define ordenação padrão da listagem;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco', 'data_criacao']
-    ordering = ['-data_criacao']  # mais recentes primeiro
-```
-- Use `-` para ordem decrescente.
-
----
-# list_editable
-- Permite editar campos direto na listagem;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco', 'estoque', 'ativo']
-    list_editable = ['preco', 'estoque', 'ativo']
-```
-- O campo deve estar em `list_display`;
-- O primeiro campo de `list_display` não pode ser editável.
-
----
-# date_hierarchy
-- Adiciona navegação por data no topo;
-```python
-@admin.register(Pedido)
-class PedidoAdmin(admin.ModelAdmin):
-    list_display = ['id', 'cliente', 'total', 'data']
-    date_hierarchy = 'data'
-```
-- Permite navegar por ano/mês/dia.
-
----
-# list_per_page
-- Define quantos itens por página;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco']
-    list_per_page = 25  # padrão é 100
+    def get_queryset(self):
+        # Sobrescreve a query padrão
+        return Produto.objects.filter(ativo=True)
 ```
 
 ---
-# Exemplo Completo - Listagem
+# ListView - Contexto Extra
 ```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'categoria', 'preco', 'estoque', 'ativo']
-    list_filter = ['categoria', 'ativo']
-    search_fields = ['nome', 'descricao']
-    ordering = ['nome']
-    list_editable = ['preco', 'ativo']
-    list_per_page = 20
-    date_hierarchy = 'data_criacao'
+class ProdutoListView(ListView):
+    model = Produto
+    context_object_name = 'produtos'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['categorias'] = Categoria.objects.all()
+        context['titulo'] = 'Lista de Produtos'
+        return context
 ```
 
 ---
-# Customizando o Formulário
-- Por padrão, o Admin exibe todos os campos editáveis;
-- Podemos customizar quais campos aparecem e como.
-
----
-# fields
-- Define quais campos aparecem e em qual ordem;
+# DetailView
+- Exibe detalhes de um objeto;
 ```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    fields = ['nome', 'categoria', 'preco', 'descricao']
+from django.views.generic import DetailView
+
+class ProdutoDetailView(DetailView):
+    model = Produto
 ```
-- Campos não listados não aparecem no formulário.
+- Busca objeto pelo `pk` ou `slug` da URL;
+- Renderiza `produto_detail.html`;
+- Passa objeto como `object` ou `produto`.
 
 ---
-# exclude
-- Exclui campos específicos;
+# DetailView - URL
 ```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    exclude = ['slug', 'data_atualizacao']
-```
-- Todos os outros campos aparecem.
+urlpatterns = [
+    # Usando pk
+    path('produto/<int:pk>/', ProdutoDetailView.as_view(), name='produto_detalhe'),
 
----
-# readonly_fields
-- Campos exibidos mas não editáveis;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    readonly_fields = ['data_criacao', 'data_atualizacao', 'slug']
-```
-- Útil para campos automáticos.
-
----
-# fieldsets
-- Agrupa campos em seções;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    fieldsets = [
-        ('Informações Básicas', {
-            'fields': ['nome', 'categoria', 'descricao']
-        }),
-        ('Preço e Estoque', {
-            'fields': ['preco', 'estoque']
-        }),
-        ('Configurações', {
-            'fields': ['ativo', 'destaque'],
-            'classes': ['collapse']  # seção recolhível
-        }),
-    ]
-```
-
----
-# fieldsets - Opções
-```python
-fieldsets = [
-    ('Seção', {
-        'fields': ['campo1', 'campo2'],
-        'classes': ['collapse'],  # recolhível
-        'description': 'Texto explicativo'
-    }),
-    ('Campos na mesma linha', {
-        'fields': [('campo1', 'campo2')]  # tuple = mesma linha
-    }),
+    # Usando slug
+    path('produto/<slug:slug>/', ProdutoDetailView.as_view(), name='produto_detalhe'),
 ]
 ```
 
 ---
-# Inlines
-- Edita objetos relacionados na mesma página;
-- Útil para relações ForeignKey;
-- Ex: editar itens do pedido na página do pedido.
+# DetailView - Template
+```django
+<!-- produtos/produto_detail.html -->
+<h1>{{ produto.nome }}</h1>
 
----
-# Tipos de Inline
-```python
-from django.contrib import admin
-from .models import Pedido, ItemPedido
+<p>{{ produto.descricao }}</p>
+<p>Preço: R$ {{ produto.preco }}</p>
+<p>Categoria: {{ produto.categoria }}</p>
 
-# Exibe como tabela
-class ItemInline(admin.TabularInline):
-    model = ItemPedido
-    extra = 1  # linhas vazias extras
-
-# Exibe como formulários empilhados
-class ItemStackedInline(admin.StackedInline):
-    model = ItemPedido
-    extra = 1
+<a href="{% url 'produto_editar' produto.pk %}">Editar</a>
+<a href="{% url 'produto_deletar' produto.pk %}">Deletar</a>
 ```
 
 ---
-# Usando Inlines
+# DetailView - Customizando
 ```python
-class ItemInline(admin.TabularInline):
-    model = ItemPedido
-    extra = 1
-    fields = ['produto', 'quantidade', 'preco']
-
-@admin.register(Pedido)
-class PedidoAdmin(admin.ModelAdmin):
-    list_display = ['id', 'cliente', 'data', 'total']
-    inlines = [ItemInline]
+class ProdutoDetailView(DetailView):
+    model = Produto
+    template_name = 'produtos/detalhe.html'
+    context_object_name = 'produto'
+    slug_field = 'slug'        # campo do model
+    slug_url_kwarg = 'slug'    # nome na URL
 ```
 
 ---
-# Inline - Opções
+# CreateView
+- Formulário para criar objetos;
 ```python
-class ItemInline(admin.TabularInline):
-    model = ItemPedido
-    extra = 1              # linhas extras vazias
-    min_num = 1            # mínimo de itens
-    max_num = 10           # máximo de itens
-    can_delete = True      # permitir deletar
-    show_change_link = True  # link para editar item
-    readonly_fields = ['subtotal']
+from django.views.generic import CreateView
+from django.urls import reverse_lazy
+
+class ProdutoCreateView(CreateView):
+    model = Produto
+    fields = ['nome', 'descricao', 'preco', 'categoria']
+    success_url = reverse_lazy('produto_lista')
+```
+- Gera formulário automaticamente;
+- Salva o objeto se válido;
+- Redireciona para `success_url`.
+
+---
+# Por que reverse_lazy?
+- `reverse()` é executado na importação do módulo;
+- Nesse momento as URLs podem não estar carregadas;
+- `reverse_lazy()` só executa quando necessário;
+- **Sempre use `reverse_lazy` em atributos de classe**.
+
+---
+# CreateView - Template
+```django
+<!-- produtos/produto_form.html -->
+<h1>Novo Produto</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Salvar</button>
+</form>
+
+<a href="{% url 'produto_lista' %}">Cancelar</a>
+```
+- Template padrão: `<model>_form.html`
+
+---
+# CreateView - Customizando
+```python
+class ProdutoCreateView(CreateView):
+    model = Produto
+    fields = ['nome', 'descricao', 'preco', 'categoria']
+    template_name = 'produtos/criar.html'
+    success_url = reverse_lazy('produto_lista')
+
+    def form_valid(self, form):
+        form.instance.criado_por = self.request.user
+        return super().form_valid(form)
+```
+- `form_valid()` é chamado quando o form é válido.
+
+---
+# UpdateView
+- Formulário para editar objetos;
+```python
+from django.views.generic import UpdateView
+
+class ProdutoUpdateView(UpdateView):
+    model = Produto
+    fields = ['nome', 'descricao', 'preco', 'categoria']
+    success_url = reverse_lazy('produto_lista')
+```
+- Carrega objeto existente no formulário;
+- Usa o mesmo template que CreateView (`produto_form.html`).
+
+---
+# UpdateView - Template Compartilhado
+```django
+<!-- produtos/produto_form.html -->
+<h1>
+    {% if object %}
+        Editar {{ object.nome }}
+    {% else %}
+        Novo Produto
+    {% endif %}
+</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Salvar</button>
+</form>
 ```
 
 ---
-# Actions (Ações em Lote)
-- Ações aplicadas a múltiplos objetos selecionados;
-- Por padrão: apenas "Deletar selecionados".
+# DeleteView
+- Confirmação e exclusão de objetos;
+```python
+from django.views.generic import DeleteView
+
+class ProdutoDeleteView(DeleteView):
+    model = Produto
+    success_url = reverse_lazy('produto_lista')
+```
+- GET: exibe página de confirmação;
+- POST: deleta o objeto;
+- Template padrão: `produto_confirm_delete.html`.
 
 ---
-# Criando Actions
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco', 'ativo']
-    actions = ['ativar_produtos', 'desativar_produtos']
+# DeleteView - Template
+```django
+<!-- produtos/produto_confirm_delete.html -->
+<h1>Confirmar Exclusão</h1>
 
-    @admin.action(description="Ativar produtos selecionados")
-    def ativar_produtos(self, request, queryset):
-        queryset.update(ativo=True)
+<p>Tem certeza que deseja excluir "{{ object.nome }}"?</p>
 
-    @admin.action(description="Desativar produtos selecionados")
-    def desativar_produtos(self, request, queryset):
-        queryset.update(ativo=False)
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Sim, excluir</button>
+    <a href="{% url 'produto_lista' %}">Cancelar</a>
+</form>
 ```
 
 ---
-# Actions com Feedback
+# Redirecionamento Dinâmico
 ```python
-@admin.action(description="Ativar produtos selecionados")
-def ativar_produtos(self, request, queryset):
-    count = queryset.update(ativo=True)
-    self.message_user(
-        request,
-        f"{count} produto(s) ativado(s) com sucesso."
-    )
+class ProdutoUpdateView(UpdateView):
+    model = Produto
+    fields = ['nome', 'descricao', 'preco']
+
+    def get_success_url(self):
+        # Redireciona para o detalhe do objeto editado
+        return reverse('produto_detalhe', kwargs={'pk': self.object.pk})
+```
+- `get_success_url()` para URLs dinâmicas.
+
+---
+# Usando Form Class
+```python
+from .forms import ProdutoForm
+
+class ProdutoCreateView(CreateView):
+    model = Produto
+    form_class = ProdutoForm  # ao invés de fields
+    success_url = reverse_lazy('produto_lista')
+```
+- Use `form_class` para forms personalizados;
+- Não pode usar `fields` junto com `form_class`.
+
+---
+# Resumo - Templates Padrão
+| View | Template Padrão |
+|------|-----------------|
+| ListView | `<model>_list.html` |
+| DetailView | `<model>_detail.html` |
+| CreateView | `<model>_form.html` |
+| UpdateView | `<model>_form.html` |
+| DeleteView | `<model>_confirm_delete.html` |
+
+---
+# Resumo - Variáveis de Contexto
+| View | Variável Padrão |
+|------|-----------------|
+| ListView | `object_list` |
+| DetailView | `object` |
+| CreateView | `form` |
+| UpdateView | `object`, `form` |
+| DeleteView | `object` |
+
+---
+# CRUD Completo - Views
+```python
+# views.py
+from django.views.generic import (
+    ListView, DetailView, CreateView, UpdateView, DeleteView
+)
+from django.urls import reverse_lazy
+from .models import Produto
+
+class ProdutoListView(ListView):
+    model = Produto
+    context_object_name = 'produtos'
+
+class ProdutoDetailView(DetailView):
+    model = Produto
+
+class ProdutoCreateView(CreateView):
+    model = Produto
+    fields = ['nome', 'descricao', 'preco', 'categoria', 'ativo']
+    success_url = reverse_lazy('produto_lista')
 ```
 
 ---
-# Customizando o Cabeçalho
+# CRUD Completo - Views (cont.)
 ```python
-# admin.py ou urls.py
-admin.site.site_header = "Minha Loja - Administração"
-admin.site.site_title = "Admin Minha Loja"
-admin.site.index_title = "Painel de Controle"
-```
-- `site_header`: texto no topo da página
-- `site_title`: título da aba do navegador
-- `index_title`: título da página inicial
+class ProdutoUpdateView(UpdateView):
+    model = Produto
+    fields = ['nome', 'descricao', 'preco', 'categoria', 'ativo']
+    success_url = reverse_lazy('produto_lista')
 
----
-# prepopulated_fields
-- Preenche campos automaticamente baseado em outros;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    prepopulated_fields = {'slug': ('nome',)}
-```
-- Muito usado para gerar slugs automaticamente.
-
----
-# autocomplete_fields
-- Busca com autocomplete para ForeignKey;
-```python
-@admin.register(Categoria)
-class CategoriaAdmin(admin.ModelAdmin):
-    search_fields = ['nome']  # necessário!
-
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    autocomplete_fields = ['categoria']
-```
-- O model relacionado precisa ter `search_fields`.
-
----
-# raw_id_fields
-- Alternativa ao select para ForeignKey com muitos itens;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    raw_id_fields = ['categoria']
-```
-- Exibe campo com ID e botão de busca.
-
----
-# filter_horizontal / filter_vertical
-- Widget melhorado para ManyToMany;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    filter_horizontal = ['tags']
-    # ou
-    filter_vertical = ['tags']
+class ProdutoDeleteView(DeleteView):
+    model = Produto
+    success_url = reverse_lazy('produto_lista')
 ```
 
 ---
-# save_model
-- Customiza o que acontece ao salvar;
+# CRUD Completo - URLs
 ```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    def save_model(self, request, obj, form, change):
-        if not change:  # novo objeto
-            obj.criado_por = request.user
-        super().save_model(request, obj, form, change)
+# urls.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.ProdutoListView.as_view(), name='produto_lista'),
+    path('<int:pk>/', views.ProdutoDetailView.as_view(), name='produto_detalhe'),
+    path('novo/', views.ProdutoCreateView.as_view(), name='produto_criar'),
+    path('<int:pk>/editar/', views.ProdutoUpdateView.as_view(), name='produto_editar'),
+    path('<int:pk>/deletar/', views.ProdutoDeleteView.as_view(), name='produto_deletar'),
+]
 ```
 
 ---
-# get_queryset
-- Customiza a query da listagem;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        # Apenas produtos da loja do usuário
-        if not request.user.is_superuser:
-            qs = qs.filter(loja=request.user.loja)
-        return qs
+# CRUD - Lista (produto_list.html)
+```django
+<h1>Produtos</h1>
+<a href="{% url 'produto_criar' %}">Novo Produto</a>
+
+<table>
+    <tr><th>Nome</th><th>Preço</th><th>Ações</th></tr>
+    {% for produto in produtos %}
+    <tr>
+        <td><a href="{% url 'produto_detalhe' produto.pk %}">{{ produto.nome }}</a></td>
+        <td>R$ {{ produto.preco }}</td>
+        <td>
+            <a href="{% url 'produto_editar' produto.pk %}">Editar</a>
+            <a href="{% url 'produto_deletar' produto.pk %}">Deletar</a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
 ```
 
 ---
-# Exemplo Completo
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    # Listagem
-    list_display = ['nome', 'categoria', 'preco', 'ativo']
-    list_filter = ['categoria', 'ativo']
-    search_fields = ['nome', 'descricao']
-    ordering = ['nome']
+# CRUD - Detalhe (produto_detail.html)
+```django
+<h1>{{ produto.nome }}</h1>
 
-    # Formulário
-    fieldsets = [
-        (None, {'fields': ['nome', 'slug', 'categoria']}),
-        ('Detalhes', {'fields': ['descricao', 'preco', 'estoque']}),
-        ('Status', {'fields': ['ativo'], 'classes': ['collapse']}),
-    ]
-    prepopulated_fields = {'slug': ('nome',)}
-    readonly_fields = ['data_criacao']
+<p><strong>Descrição:</strong> {{ produto.descricao }}</p>
+<p><strong>Preço:</strong> R$ {{ produto.preco }}</p>
+<p><strong>Categoria:</strong> {{ produto.categoria }}</p>
+<p><strong>Status:</strong> {% if produto.ativo %}Ativo{% else %}Inativo{% endif %}</p>
+
+<a href="{% url 'produto_editar' produto.pk %}">Editar</a>
+<a href="{% url 'produto_deletar' produto.pk %}">Deletar</a>
+<a href="{% url 'produto_lista' %}">Voltar</a>
+```
+
+---
+# CRUD - Form (produto_form.html)
+```django
+<h1>{% if object %}Editar{% else %}Novo{% endif %} Produto</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Salvar</button>
+    <a href="{% url 'produto_lista' %}">Cancelar</a>
+</form>
+```
+
+---
+# CRUD - Delete (produto_confirm_delete.html)
+```django
+<h1>Excluir Produto</h1>
+
+<p>Tem certeza que deseja excluir <strong>{{ object.nome }}</strong>?</p>
+<p>Esta ação não pode ser desfeita.</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Sim, excluir</button>
+    <a href="{% url 'produto_lista' %}">Cancelar</a>
+</form>
+```
+
+---
+# Mixins
+- Classes que adicionam funcionalidades específicas;
+- Não funcionam sozinhas, devem ser combinadas com outras classes;
+- Permitem compor comportamentos de forma modular;
+- Django oferece vários mixins prontos;
+- Conceito importante de POO: herança múltipla controlada.
+
+---
+# Como Mixins Funcionam
+```python
+# Mixin adiciona uma funcionalidade
+class TituloMixin:
+    titulo = 'Página'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['titulo'] = self.titulo
+        return context
+
+# Combinamos mixin + view genérica
+class ProdutoListView(TituloMixin, ListView):
+    model = Produto
+    titulo = 'Lista de Produtos'
+```
+- Mixins vêm **antes** da view na herança!
+
+---
+# Ordem dos Mixins
+```python
+# CORRETO: Mixins primeiro, View por último
+class MinhaView(MixinA, MixinB, ListView):
+    ...
+
+# ERRADO: View não deve vir primeiro
+class MinhaView(ListView, MixinA):  # Pode não funcionar!
+    ...
+```
+- Python resolve métodos da esquerda para direita (MRO);
+- A view genérica deve ser a última classe base.
+
+---
+# Autenticação em CBV
+- Proteger views para usuários logados;
+- Em FBV usamos o decorator `@login_required`;
+- Em CBV usamos o mixin `LoginRequiredMixin`.
+
+---
+# LoginRequiredMixin
+```python
+from django.contrib.auth.mixins import LoginRequiredMixin
+
+class ProdutoCreateView(LoginRequiredMixin, CreateView):
+    model = Produto
+    fields = ['nome', 'preco']
+    success_url = reverse_lazy('produto_lista')
+```
+- Redireciona para login se não autenticado;
+- Mixin deve vir **antes** da view genérica.
+
+---
+# Configurando LoginRequiredMixin
+```python
+class ProdutoCreateView(LoginRequiredMixin, CreateView):
+    model = Produto
+    fields = ['nome', 'preco']
+
+    # URL de login (ou configure LOGIN_URL no settings.py)
+    login_url = '/login/'
+
+    # Redireciona de volta após login
+    redirect_field_name = 'next'
+```
+
+---
+# PermissionRequiredMixin
+- Verifica se o usuário tem permissões específicas;
+```python
+from django.contrib.auth.mixins import PermissionRequiredMixin
+
+class ProdutoCreateView(PermissionRequiredMixin, CreateView):
+    model = Produto
+    fields = ['nome', 'preco']
+    permission_required = 'app.add_produto'
+
+    # Múltiplas permissões
+    # permission_required = ['app.add_produto', 'app.change_produto']
+```
+- Permissões são criadas automaticamente pelo Django para cada model.
+
+---
+# Permissões Padrão do Django
+- Para cada model, Django cria 4 permissões:
+    - `app.add_<model>` - criar
+    - `app.change_<model>` - editar
+    - `app.delete_<model>` - deletar
+    - `app.view_<model>` - visualizar
+- Ex: `produtos.add_produto`, `produtos.change_produto`
+
+---
+# UserPassesTestMixin
+- Teste customizado para autorização;
+```python
+from django.contrib.auth.mixins import UserPassesTestMixin
+
+class ProdutoUpdateView(UserPassesTestMixin, UpdateView):
+    model = Produto
+    fields = ['nome', 'preco']
+
+    def test_func(self):
+        # Só o dono pode editar
+        produto = self.get_object()
+        return self.request.user == produto.criado_por
+```
+- Retorna True para permitir, False para negar.
+
+---
+# Combinando Mixins
+```python
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+
+class ProdutoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    model = Produto
+    success_url = reverse_lazy('produto_lista')
+    permission_required = 'produtos.delete_produto'
+```
+- Primeiro verifica login, depois permissão;
+- Ordem dos mixins importa!
+
+---
+<style scoped>pre { font-size: 20px; }</style>
+# CRUD Protegido - Exemplo
+```python
+from django.contrib.auth.mixins import LoginRequiredMixin
+
+class ProdutoListView(ListView):  # Público
+    model = Produto
+
+class ProdutoDetailView(DetailView):  # Público
+    model = Produto
+
+class ProdutoCreateView(LoginRequiredMixin, CreateView):
+    model = Produto
+    fields = ['nome', 'preco']
+    success_url = reverse_lazy('produto_lista')
+
+class ProdutoUpdateView(LoginRequiredMixin, UpdateView):
+    model = Produto
+    fields = ['nome', 'preco']
+    success_url = reverse_lazy('produto_lista')
+
+class ProdutoDeleteView(LoginRequiredMixin, DeleteView):
+    model = Produto
+    success_url = reverse_lazy('produto_lista')
 ```
 
 ---
 # Referências
-- https://docs.djangoproject.com/en/5.1/ref/contrib/admin/
-- https://docs.djangoproject.com/en/5.1/ref/contrib/admin/#modeladmin-options
-- https://docs.djangoproject.com/en/5.1/ref/contrib/admin/#inlinemodeladmin-objects
+- https://docs.djangoproject.com/en/5.1/topics/class-based-views/
+- https://docs.djangoproject.com/en/5.1/ref/class-based-views/
+- https://ccbv.co.uk/ (referência visual das CBVs)
 
 ---
 # <!--fit--> Dúvidas? 🤔

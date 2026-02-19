@@ -4,7 +4,7 @@ size: 4:3
 marp: true
 paginate: true
 _paginate: false
-title: Aula 10: Autenticação
+title: Aula 10: Forms
 author: Diego Cirilo
 
 ---
@@ -15,190 +15,379 @@ img {
 }
 </style>
 
-# <!-- fit --> Programação de Sistemas para Internet
+# <!-- fit --> Programação de Aplicação Web
 
 ### Prof. Diego Cirilo
 
-**Aula 10**: Autenticação
+**Aula 10**: Forms
 
 ---
-# Autenticação e Autorização
-- É necessário limitar o acesso a operações nos sistemas web;
-- Usuários devem apresentar credenciais (*login* e senha) para *provar* sua identidade para o sistema - Autenticação;
-- Cada usuário tem um conjunto de operações permitidas - Autorização;
-- O Django já possui essas funcionalidades.
+# Entrada de dados no sistema
+- Como enviar dados para o sistema?
+- Formulários - *Forms*
 
 ---
-# Django User Model
-- O Django já possui um Model padrão para User;
-- Já conta com vários atributos:
-    - `username`, `first_name`, `last_name`, `email`, `password`, `groups`, `user_permissions`, `is_staff`, `is_active`, `is_superuser`, `last_login` e `date_joined`;
----
-# Custom User
-- Nem sempre o User do Django atende as nossas necessidades;
-- Há duas possibilidades:
-    - Criar nossa própria classe *User*, herdando de *AbstractUser* ou *AbstractBaseUser*;
-    - Criar uma nova classe com os dados extras, deixando *User* apenas para autenticação;
-- Qual a melhor?
+# HTML Forms
+- Definidos pela tag `<form></form>`;
+- Os dados são preenchidos nos elementos `<input>`;
+- Os *inputs* podem ter vário tipos (`type`):
+    - `<input type="button">`;
+    - `<input type="checkbox">`;
+    - `<input type="color">`;
+    - `<input type="date">`;
+    - `<input type="datetime-local">`;
+    - `<input type="email">`.
 
 ---
-# Custom User
-- *AbstractUser*: É basicamente o *User* do Django, porém como classe abstrata. 
-- *AbstractBaseUser*: É classe base, sem a maioria dos atributos da classe *User*. É útil quando não temos interesse nesses atributos padrão.
-- A não ser que você tenha um bom motivo, recomendo herdar de *AbstractUser*;
-- [Referência](https://docs.djangoproject.com/en/5.1/topics/auth/customizing/).
+# Inputs
+- Cont.:
+    - `<input type="file">`;
+    - `<input type="hidden">`;
+    - `<input type="image">`;
+    - `<input type="month">`;
+    - `<input type="number">`;
+    - `<input type="password">`;
+    - `<input type="radio">`.
 
 ---
-# Exemplos
-- Classe *User* customizada (`models.py`):
+# Inputs
+- Cont.:
+    - `<input type="range">`;
+    - `<input type="reset">`;
+    - `<input type="search">`;
+    - `<input type="submit">`;
+    - `<input type="tel">`;
+    - `<input type="text">`;
+    - `<input type="time">`;
+    - `<input type="url">`;
+    - `<input type="week">`.
+
+---
+# Labels
+- Labels são as legendas ou nome do campo;
+- `<label for="id do campo">Conteúdo do label</label>`;
+- Ex.:
+```html
+<form>
+    <input type="text" id="nome" name="nome"> 
+    <label for="nome">Nome: </label>
+</form>
+```
+
+---
+# Submit
+- O `input` do tipo `submit` envia os dados do formulário:
+- `<input type=submit value="Enviar">`
+
+# Name
+- O atributo `name` é importante pois é como o dado vai ser referenciado no servidor.
+
+---
+<style scoped>section { font-size: 22px; }</style>
+# Method/Action
+- O atributo `action` indica o caminho/url para onde o form será enviado.;
+- O `method` pode ser `POST` ou `GET`:
+- `GET`:
+    - Os dados são enviados na URL;
+    - Utilizado quando a ação não modifica dados no sistema;
+    - É útil pois permite salvar a URL com conteúdo;
+    - Exemplos: pesquisa, ordenação, filtros, etc.
+- `POST`:
+    - Os dados são enviados na requisição HTTP;
+    - Deve ser utilizado sempre que a ação modifique dados no sistema.
+
+---
+# Recebendo os dados de um form
+- Quando o usuário clica no `submit` os dados do form são enviados para o servidor;
+- Se o `method` for `GET` os dados vão como uma *query string* na própria URL;
+- Ex. `http://localhost:8000?nome=Maria&idade=23`;
+- Se o `method` for `POST` os dados vão na requisição (`request`) HTTP;
+- Quando usar `GET` ou `POST`?
+
+---
+# Cross-site Request Forgery
+- Falsificação de requisição entre sites;
+- Aplicações maliciosas podem fazer requisições de usuários "logados";
+- Pode ser prevenido com um token (ficha) de segurança;
+- O Django já faz isso com a tag `{% csrf_token %}`;
+- É uma chave que o Django gera quando renderiza o form, e é enviado em um `input hidden`;
+- Quando o Django recebe a requisição, ele compara se o token é o mesmo que ele gerou.
+
+---
+# Recebendo os dados de um form
+- Caso o `action` não seja definido, o formulário é enviado para a mesma URL onde o formulário foi carregado;
+- No Django, esses dados são acessados na `view`, através dos *QueryDicts* `request.POST`, `request.GET` e `request.FILES`;
+- Ex. `request.POST['nome']` ou `request.POST.get('nome')`;
+- É possível utilizar os dados diretamente assim, porém o Django conta com uma ferramenta mais completa.
+
+---
+# Django Forms
+- O Django permite a descrição de forms diretamente no Python;
+- As vantagens são a possibilidade de validação, redução da quantidade de HTML, segurança, integração com os Models, etc.;
+- Maior facilidade de manutenção do código também.
+
+---
+# Definindo um Form no Django
+- Criamos um arquivo `forms.py` na pasta do `app`:
+- [Tipos de Dados](https://docs.djangoproject.com/pt-br/5.1/ref/forms/fields/#built-in-field-classes);
+- Usam uma sintaxe parecida com a dos Models;
+- Ex.:
 ```python
-from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django import forms
 
-class User(AbstractUser): # ou AbstractBaseUser
-  cpf = models.CharField(max_length=11, unique=True) # exemplo
+class ContactForm(forms.Form):
+    name = forms.CharField(max_length=100, label="Seu Nome")
+    email = forms.EmailField(label="Seu Email")
+    message = forms.CharField(widget=forms.Textarea, label="Mensagem")
 ```
-- Devemos adicionar a configuração (`settings.py`)
+
+---
+# Widgets
+- Os widgets são os componentes que renderizam os `inputs` do HTML;
+- Os fields já tem widgets padrão, mas é possível customizar;
+- [Tipos de Widgets](https://docs.djangoproject.com/pt-br/5.1/ref/forms/widgets/#built-in-widgets).
+
+---
+# Model Forms
+- Normalmente os Forms trabalham com dados de algum Model;
+- É possível criar um Form "automaticamente" com os dados de um Model;
+- Ex.:
 ```python
-AUTH_USER_MODEL = "nomedoapp.User"
+from django import forms
+from .models import MeuModel
+
+class MeuModelForm(forms.ModelForm): # É um padrão usar o Form no nome da classe
+    class Meta:
+        model = MeuModel  # Modelo associado
+        fields = ['campo1', 'campo2', 'campo3']  # Campos incluídos no formulário
 ```
 
 ---
-# Exemplos
-- Classe de *Perfil*, que adiciona campos extras sem alterar *User*;
-- Exemplo (`models.py`):
+# Usando o Django Forms nas views
+- O form pode ser instanciado vazio ou com dados;
+- Um form vazio é utilizado para um formulário de criação (cadastro, por exemplo);
+- Um form com dados pode ser utilizado para receber/tratar/armazenar ou realizar a alteração dos dados.
+
+---
+# Usando o Django Forms nas views
+
 ```python
-from django.db import models
-from django.contrib.auth.models import User
+from .forms import MeuModelForm
 
-class Perfil(models.Model):
-  user = models.OneToOneField(User, on_delete=models.CASCADE)
-  cpf = models.CharField(max_length=11, unique=True) # exemplo
+def minha_view(request):
+    if request.method == 'POST':
+        form = MeuForm(request.POST)
+        if form.is_valid():
+            form.save()  # Salva os dados no banco (ModelForm)
+            return render(request, 'success.html')
+    else:
+        form = MeuForm()
+
+    context = {
+        'form': form,
+    }
+    return render(request, 'form_template.html', context) # passa o form no context
+    
 ```
 
 ---
-# Exemplos
-- No caso do *Perfil*, podemos acessar os dados extras com:
+# Editando os dados na view
+- O método `save()` já chama o processo de escrita no BD;
+- Podemos usar a opção `commit=False` para evitar que os dados sejam escritos no BD;
+- Com esses dados em uma variável, podemos realizar algum processamento e aí sim, escrever;
 ```python
-usuario = User.objects.get(id=2) # pega o user com id 2
-cpf_do_user = usuario.perfil.cpf
+...
+temporario = form.save(commit=False)  # Recupera os dados do form sem salvar
+temporario.usuario = request.user
+temporario.save()
+...
 ```
 
 ---
-# Custom User
-- O Django por padrão usa o `username` como chave de login;
-- É comum usarmos `email` ou mesmo `cpf` ao invés de `username`;
-- Na customização podemos configurar isso;
-- É necessário fazer várias alterações;
-- Porém podemos reutilizar o código em outros projetos.
+# Upload de arquivos
+- Usando um form do Django, passamos o `request.FILES` além do `request.POST`:
+    - `form = ComArquivoForm(request.POST, request.FILES)`.
+- No template utilizamos:
+```django
+<form method="post" enctype="multipart/form-data">
+```
 
 ---
-# Exemplo
+# Validação
+- O método `is_valid` executa as validações do form;
+- O Django possui validações padrão para cada tipo de dado;
+- É possível criar suas próprias validações;
+- Quando uma validação falha, uma exceção *ValidationError* é gerada.
+
+---
+# Criando Validações
+- Podemos validar um campo definindo um método `clean_nomedocampo`, por exemplo para validar um campo CPF:
 ```python
-class Usuario(AbstractUser):
-    # Para usar como login, é necessário ser único
-    email = models.EmailField(max_length=255, unique=True)
-   
-    # Define qual o campo é o nome de usuário
-    USERNAME_FIELD = "email"
-    # Necessário para createsuperuser continuar funcionando
-    REQUIRED_FIELDS = ["username"]
+...
+def clean_cpf(self):
+    data = self.cleaned_data["cpf"]
+    if (cpf não é valido): # escreva a validação de cpf
+        raise ValidationError("CPF inválido!") # gera o erro
+
+    return data # sempre retorne data
+```
+- É possível processar os dados, mudar maiúsculas/minúsculas, etc.
+
+---
+# Criando Validações
+- Exemplo
+```python
+...
+def clean_estado(self):
+    data = self.cleaned_data["estado"]
+    estados_validos = ['RN', 'CE', 'PB']
+    if (not data in estados_validos):  # verifica se o valor existe na lista
+        raise ValidationError("O estado informado não é permitido!") # gera o erro
+
+    return data # sempre retorne data
 ```
 
 ---
-# Views padrão de autenticação
-- O Django possui um sistema completo de autenticação pronto;
-- Views de Login/Logout/Alterar Senha/etc.;
-- Views de cadastro não incluídas;
-- Templates também não incluídos;
-- Como tudo no Django, é possível customizar.
+# Mensagens de Erro
+- Caso haja um *ValidationError* na validação de um Form, o Django retorna um atributo `errors` em cada field;
+- Ex. `form.cpf.errors`;
+- Quando usamos o form completo no template, os erros já são carregados, desde que a view envie o form validado!
 
 ---
-<style scoped>section { font-size: 24px; }</style>
-# URLs
-- Para utilizar as views padrão, devemos adicionar ao `config/urls.py` (ou diretamente no app):
+# Mensagens de Erro
+- Exemplo (`views.py`):
+```django
+def mensagem(request):
+    if request.method == "POST":
+        form = MensagemForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('mensagens')
+        else:
+            context["form"] = form
+    else:
+        context["form"] = MensagemForm()
+
+    return render(request, "contact.html", context)
 ```
 
-urlpatterns = [
+---
+# Customização
+- Os Forms diretamente do Django não tem estilo;
+- Há algumas possibilidades para estilizar um Form no Django:
+    - Acessando os fields (form.nomedofield) diretamente no template e criando o estilo diretamente;
+    - Customizando os `widgets` diretamente em `forms.py` passando atributos como `class` e `style` (inline;
+    - Usando bibliotecas que auxiliam nessa tarefa, como o Django Crispy Forms e o Django Widget Tweaks.
+
+---
+# Customização direto no template
+- Exemplo de um campo *Nome* usando Bootstrap:
+```django
+<div class="mb-3">
+    <label for="id_nome" class="form-label">{{ form.nome.label }}</label>
+    {{ form.nome|add_class:"form-control" }}
+    {% if form.nome.errors %}
+        <div class="text-danger">
+            {% for error in form.nome.errors %}
+                <small>{{ error }}</small>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+```
+
+---
+# Customização do Widget
+- Exemplo de customização de um campo no `forms.py`:
+```django
+nome = forms.CharField(
+        label="Nome",
+        max_length=100,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control', # do bootstrap, mas pode adicionar as suas
+            'placeholder': 'Enter your name'
+        })
+    )
+```
+
+---
+# Django Crispy Forms
+- É um pacote que traz várias funcionalidades para estilizar os forms diretamente no Python;
+- A vantagem é padronizar essa estilização, facilitar o reuso e simplificar os templates;
+- Deve ser instalado com o pip `pip install django-crispy-forms`;
+- É necessário também instalar um pacote de estilos, na disciplinas usaremos o Bootstrap 5: `pip install crispy-bootstrap5`;
+- Não esqueça de adicionar ao `requirements.txt`;
+- [Documentação](https://django-crispy-forms.readthedocs.io/en/latest/index.html).
+
+---
+# Django Crispy Forms
+- Além de instalar os pacotes, devemos adicionar ao `INSTALLED_APPS` do `settings.py` e a configuração do template;
+- Ex. (`settings.py`):
+```python
+INSTALLED_APPS = (
     ...
-    path("accounts/", include("django.contrib.auth.urls")),
+    "crispy_forms",
+    "crispy_bootstrap5",
     ...
-]
-```
-- Os *names* nas URLs (para usar com a tag `url` nos templates) são: `login`, `logout`, `password_change`, `password_change_done`, `password_reset`, `password_reset_done`, `password_reset_confirm`, `password_reset_complete`.
+)
 
----
-# URLs
-- Para customizar as URLs e outros parâmetros das *views* podemos adicionar um a um no `urls.py`:
-```
-from django.contrib.auth import views as auth_views
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 
-urlpatterns = [
-    ...
-    path('login/', auth_views.LoginView.as_view(), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
-    path('password_change/', auth_views.PasswordChangeView.as_view(), name='password_change'),
-    path('password_change/done/', auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
-    path('password_reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
-    path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
-    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
-    ...
-]
+CRISPY_TEMPLATE_PACK = "bootstrap5"
 ```
 
 ---
-# Configurações Úteis
-```
-AUTH_USER_MODEL = "usuarios.User"
-
-LOGIN_URL = "login"
-LOGOUT_REDIRECT_URL = "index"
-LOGIN_REDIRECT_URL = "index"
+# Django Crispy Form Filter
+- O jeito mais básico de usar é com o filtro de template;
+- Carregue os filtros no início do template:
+```python
+{% load crispy_forms_filters %}
 ```
 
+- Use com  `{{ form | crispy }}`;
+- Vantagem: simplicidade;
+- Desvantagem: usa o Template Pack diretamente, sem permitir mais customizações.
+
+
 ---
-<style scoped>section { font-size: 24px; }</style>
-# Templates
-- Os *templates* devem ser colocados em `templates/registration` por padrão;
-- Os nomes são respectivamente: `login.html`, `logged_out.html`, `password_change_form.html`, `password_change_done.html`, `password_reset_form.html`, `password_reset_done.html`, `password_reset_confirm.html`, `password_reset_complete`.
-- Também é possível customizar com:
+# Django Crispy FormHelper
+- O `FormHelper` é a classe utilizada para estilizar o Form;
+- Há inúmeras possibilidades;
+- [Documentação](https://django-crispy-forms.readthedocs.io/en/latest/form_helper.html).
+
+---
+# Django Crispy Forms
+- No form (`forms.py`):
+```python
+   def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Row(
+                Column('name', css_class='col-md-6'),
+                Column('email', css_class='col-md-6'),
+                css_class='row'
+            ),
+            Row(
+                Column('message', css_class='col-12'),
+                css_class='row'
+            ),
+            Submit('submit', 'Enviar', css_class='btn btn-primary')
+        )
 ```
-path("change-password/", 
-    auth_views.PasswordChangeView.as_view(template_name="change-password.html"),
-),
+
+---
+# Django Crispy Forms
+- No template:
+```python
+{% load crispy_forms_tags %}
+
+<form method="post">
+  {% csrf_token %}
+  {% crispy form %}
+</form>
 ```
-- Dica: é possível ver os templates que Django Admin usa [aqui](https://github.com/django/django/tree/main/django/contrib/admin/templates/registration).
-
----
-# Forms
-- Apesar de ser necessário criar os *templates* os forms já estão disponíveis;
-- Basta usar `{{ form  }}`;
-- Assim como os forms comuns é possível customizar ou construir o form diretamente;
-- Esses forms podem ser utilizados diretamente em outras partes do sistema, como o *PasswordChangeForm*;
-- Outro form importante é o *UserCreationForm* que pode ser utilizado na página de registro.
-
----
-# Forms
-- Os forms podem ser customizados herdando do form original;
-- Por exemplo, para remover o campo `username` quando não for necessário.
-
----
-# Recuperação de Senha
-- O Django já gera o email com o link para recuperação de senha;
-- Assim como os outros, precisa ter os templates em `registration`;
-- Para que o email seja enviado, é necessário ter um servidor de emails e configurar o `EMAIL_BACKEND` no `settings.py`;
-- Backend para testes que apenas imprime o email no terminal:
-- `EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"`
-
----
-# Limitando acesso a usuários logados
-- Quando usamos o *decorator* `@login_required` em uma view, apenas usuários logados terão acesso ao recurso;
-- Caso o usuário não esteja logado, ele será redirecionado para `LOGIN_URL`, definida no `settings.py`
-
----
-# Referências
-- https://docs.djangoproject.com/en/5.1/topics/auth/
 
 ---
 # <!--fit--> Dúvidas? 🤔

@@ -15,7 +15,7 @@ img {
 }
 </style>
 
-# <!-- fit --> Programação de Sistemas para Internet
+# <!-- fit --> Programação de Aplicação Web
 
 ### Prof. Diego Cirilo
 

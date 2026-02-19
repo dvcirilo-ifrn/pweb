@@ -4,7 +4,7 @@ size: 4:3
 marp: true
 paginate: true
 _paginate: false
-title: Aula 12: Autorização
+title: Aula 12: Autenticação
 author: Diego Cirilo
 
 ---
@@ -19,135 +19,182 @@ img {
 
 ### Prof. Diego Cirilo
 
-**Aula 12**: Autorização
+**Aula 12**: Autenticação
 
 ---
-# Autorização
-- A autorização define os recursos que podem ser acessados pelo usuário logado;
-- É possível desenvolver um sistema próprio de autorização por meio de atributos;
-- O Django já tem o seu próprio sistema.
+# Autenticação e Autorização
+- É necessário limitar o acesso a operações nos sistemas web;
+- Usuários devem apresentar credenciais (*login* e senha) para *provar* sua identidade para o sistema - Autenticação;
+- Cada usuário tem um conjunto de operações permitidas - Autorização;
+- O Django já possui essas funcionalidades.
 
 ---
-# Autorização no Django
-- Existem 3 conceitos principais no sistema de autorização do Django:
-    - Usuários;
-    - Grupos;
-    - Permissões.
+# Django User Model
+- O Django já possui um Model padrão para User;
+- Já conta com vários atributos:
+    - `username`, `first_name`, `last_name`, `email`, `password`, `groups`, `user_permissions`, `is_staff`, `is_active`, `is_superuser`, `last_login` e `date_joined`;
+---
+# Custom User
+- Nem sempre o User do Django atende as nossas necessidades;
+- Há duas possibilidades:
+    - Criar nossa própria classe *User*, herdando de *AbstractUser* ou *AbstractBaseUser*;
+    - Criar uma nova classe com os dados extras, deixando *User* apenas para autenticação;
+- Qual a melhor?
 
 ---
-# Usuários e Grupos
-- Usuários como vistos na aula passada;
-- Grupos permitem atribuir permissões para conjuntos de usuários;
-- Um usuário pode ter permissões individuais e fazer parte de um ou mais grupos.
+# Custom User
+- *AbstractUser*: É basicamente o *User* do Django, porém como classe abstrata. 
+- *AbstractBaseUser*: É classe base, sem a maioria dos atributos da classe *User*. É útil quando não temos interesse nesses atributos padrão.
+- A não ser que você tenha um bom motivo, recomendo herdar de *AbstractUser*;
+- [Referência](https://docs.djangoproject.com/en/5.1/topics/auth/customizing/).
 
 ---
-# Permissões
-- Regras de acesso a recursos;
-- No Django as permissões são relativas a um *Model*;
-- Para cada model, o Django cria automaticamente 4 permissões:
-    - `add_nomedomodel`;
-    - `change_nomedomodel`;
-    - `delete_nomedomodel`;
-    - `view_nomedomodel`;
-- Também é possível criar outras permissões além das padrão.
+# Exemplos
+- Classe *User* customizada (`models.py`):
+```python
+from django.db import models
+from django.contrib.auth.models import AbstractUser
 
----
-# Permissões customizadas
-- Usamos uma classe Meta na definição do model:
-```py
-class Livro(models.Model):
-    titulo = models.CharField(max_length=100)
-    autor = models.CharField(max_length=100)
-
-    class Meta:
-        permissions = [
-            ("pode_publicar", "Pode publicar um livro"),
-            ("pode_arquivar", "Pode arquivar um livro"),
-        ]
+class User(AbstractUser): # ou AbstractBaseUser
+  cpf = models.CharField(max_length=11, unique=True) # exemplo
+```
+- Devemos adicionar a configuração (`settings.py`)
+```python
+AUTH_USER_MODEL = "nomedoapp.User"
 ```
 
 ---
-# Permissões
-- Cada uma dessas permissões pode ser habilitada para cada usuário ou grupo;
-- As permissões podem ser configuradas na interface de Admin ou em código.
+# Exemplos
+- Classe de *Perfil*, que adiciona campos extras sem alterar *User*;
+- Exemplo (`models.py`):
+```python
+from django.db import models
+from django.contrib.auth.models import User
 
----
-# Configurando Grupos/Permissões
-- Criar grupo:
-```py
-from django.contrib.auth.models import Group
-
-grupo, sucesso = Group.objects.get_or_create(name="Nome do Grupo")
-if sucesso:
-    print(f"Sucesso!")
-else:
-    print(f"Falha!")
-```
-- Adicionar permissão a grupo:
-```py
-from django.contrib.auth.models import Permission
-
-permissao = Permission.objects.get(codename='change_nomedomodel')
-
-grupo.permissions.add(permission)
+class Perfil(models.Model):
+  user = models.OneToOneField(User, on_delete=models.CASCADE)
+  cpf = models.CharField(max_length=11, unique=True) # exemplo
 ```
 
 ---
-# Configurando Grupos/Permissões
-- Adicionando usuário a grupo:
-```py
-from django.contrib.auth.models import User # Ou o seu custom user
-
-usuario = User.objects.get(id=1)
-
-usuario.groups.add(grupo)
-```
-- Remover usuário de grupo:
-```py
-usuario.groups.remove(grupo)
+# Exemplos
+- No caso do *Perfil*, podemos acessar os dados extras com:
+```python
+usuario = User.objects.get(id=2) # pega o user com id 2
+cpf_do_user = usuario.perfil.cpf
 ```
 
 ---
-# Configurando Grupos/Permissões
-- Remover permissão de um grupo:
-```py
-grupo.permissions.remove(permission)
-```
+# Custom User
+- O Django por padrão usa o `username` como chave de login;
+- É comum usarmos `email` ou mesmo `cpf` ao invés de `username`;
+- Na customização podemos configurar isso;
+- É necessário fazer várias alterações;
+- Porém podemos reutilizar o código em outros projetos.
 
-- Remover um grupo:
-```py
-grupo.delete()
+---
+# Exemplo
+```python
+class Usuario(AbstractUser):
+    # Para usar como login, é necessário ser único
+    email = models.EmailField(max_length=255, unique=True)
+   
+    # Define qual o campo é o nome de usuário
+    USERNAME_FIELD = "email"
+    # Necessário para createsuperuser continuar funcionando
+    REQUIRED_FIELDS = ["username"]
 ```
 
 ---
-# Configurando Grupos/Permissões
-- Adicionando permissões para um usuário:
-```py
-usuario = User.objects.get(id=4)
-permissao = Permission.objects.get(codename='nomedapermissao')
-usuario.user_permissions.add(permissao)
+# Views padrão de autenticação
+- O Django possui um sistema completo de autenticação pronto;
+- Views de Login/Logout/Alterar Senha/etc.;
+- Views de cadastro não incluídas;
+- Templates também não incluídos;
+- Como tudo no Django, é possível customizar.
 
+---
+<style scoped>section { font-size: 24px; }</style>
+# URLs
+- Para utilizar as views padrão, devemos adicionar ao `config/urls.py` (ou diretamente no app):
 ```
-- Remover permissão de usuário:
-```py
-usuario.user_permissions.remove(permissao)
+
+urlpatterns = [
+    ...
+    path("accounts/", include("django.contrib.auth.urls")),
+    ...
+]
 ```
-- Remover todas as permissões de usuário:
-```py
-usuario.user_permissions.clear()
+- Os *names* nas URLs (para usar com a tag `url` nos templates) são: `login`, `logout`, `password_change`, `password_change_done`, `password_reset`, `password_reset_done`, `password_reset_confirm`, `password_reset_complete`.
+
+---
+# URLs
+- Para customizar as URLs e outros parâmetros das *views* podemos adicionar um a um no `urls.py`:
+```
+from django.contrib.auth import views as auth_views
+
+urlpatterns = [
+    ...
+    path('login/', auth_views.LoginView.as_view(), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('password_change/', auth_views.PasswordChangeView.as_view(), name='password_change'),
+    path('password_change/done/', auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
+    path('password_reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
+    path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
+    ...
+]
 ```
 
 ---
-# Verificando Permissões
-- As permissões podem ser verificadas:
-    - Usando o *decorator* `@permission_required("nomedoapp.nomedapermissao")`;
-    - Testando o usuário com `user.has_perm("nomedoapp.nomedapermissao")`;
-    - Diretamente nos templates com `{% if perms.nomedoapp.nomedapermissao %}`;
+# Configurações Úteis
+```
+AUTH_USER_MODEL = "usuarios.User"
 
-- Para o *decorator* é necessário importar:
+LOGIN_URL = "login"
+LOGOUT_REDIRECT_URL = "index"
+LOGIN_REDIRECT_URL = "index"
 ```
-from django.contrib.auth.decorators import permission_required
+
+---
+<style scoped>section { font-size: 24px; }</style>
+# Templates
+- Os *templates* devem ser colocados em `templates/registration` por padrão;
+- Os nomes são respectivamente: `login.html`, `logged_out.html`, `password_change_form.html`, `password_change_done.html`, `password_reset_form.html`, `password_reset_done.html`, `password_reset_confirm.html`, `password_reset_complete`.
+- Também é possível customizar com:
 ```
+path("change-password/", 
+    auth_views.PasswordChangeView.as_view(template_name="change-password.html"),
+),
+```
+- Dica: é possível ver os templates que Django Admin usa [aqui](https://github.com/django/django/tree/main/django/contrib/admin/templates/registration).
+
+---
+# Forms
+- Apesar de ser necessário criar os *templates* os forms já estão disponíveis;
+- Basta usar `{{ form  }}`;
+- Assim como os forms comuns é possível customizar ou construir o form diretamente;
+- Esses forms podem ser utilizados diretamente em outras partes do sistema, como o *PasswordChangeForm*;
+- Outro form importante é o *UserCreationForm* que pode ser utilizado na página de registro.
+
+---
+# Forms
+- Os forms podem ser customizados herdando do form original;
+- Por exemplo, para remover o campo `username` quando não for necessário.
+
+---
+# Recuperação de Senha
+- O Django já gera o email com o link para recuperação de senha;
+- Assim como os outros, precisa ter os templates em `registration`;
+- Para que o email seja enviado, é necessário ter um servidor de emails e configurar o `EMAIL_BACKEND` no `settings.py`;
+- Backend para testes que apenas imprime o email no terminal:
+- `EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"`
+
+---
+# Limitando acesso a usuários logados
+- Quando usamos o *decorator* `@login_required` em uma view, apenas usuários logados terão acesso ao recurso;
+- Caso o usuário não esteja logado, ele será redirecionado para `LOGIN_URL`, definida no `settings.py`
 
 ---
 # Referências

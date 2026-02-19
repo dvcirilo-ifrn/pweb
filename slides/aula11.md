@@ -4,7 +4,7 @@ size: 4:3
 marp: true
 paginate: true
 _paginate: false
-title: Aula 11: Autenticação
+title: Aula 11: Sessão/Cookies/Context Processors
 author: Diego Cirilo
 
 ---
@@ -19,186 +19,422 @@ img {
 
 ### Prof. Diego Cirilo
 
-**Aula 11**: Autenticação
+**Aula 11**: Sessão/Cookies/Context Processors
 
 ---
-# Autenticação e Autorização
-- É necessário limitar o acesso a operações nos sistemas web;
-- Usuários devem apresentar credenciais (*login* e senha) para *provar* sua identidade para o sistema - Autenticação;
-- Cada usuário tem um conjunto de operações permitidas - Autorização;
-- O Django já possui essas funcionalidades.
+# HTTP é *Stateless*
+- O protocolo HTTP não mantém estado entre requisições;
+- Cada requisição é independente;
+- O servidor não "lembra" de requisições anteriores;
+- Informações completas vão em voltam no cabeçalho/corpo da requisição;
+- Objeto `request` nas *views*;
+- Problema: como manter usuário logado? Como manter um carrinho de compras?
 
 ---
-# Django User Model
-- O Django já possui um Model padrão para User;
-- Já conta com vários atributos:
-    - `username`, `first_name`, `last_name`, `email`, `password`, `groups`, `user_permissions`, `is_staff`, `is_active`, `is_superuser`, `last_login` e `date_joined`;
----
-# Custom User
-- Nem sempre o User do Django atende as nossas necessidades;
-- Há duas possibilidades:
-    - Criar nossa própria classe *User*, herdando de *AbstractUser* ou *AbstractBaseUser*;
-    - Criar uma nova classe com os dados extras, deixando *User* apenas para autenticação;
-- Qual a melhor?
+# Cookies
+- Pequenos arquivos de texto armazenados no navegador;
+- Enviados automaticamente em cada requisição ao servidor;
+- Permitem "lembrar" informações entre requisições;
+- Têm data de expiração (ou expiram ao fechar o navegador).
 
 ---
-# Custom User
-- *AbstractUser*: É basicamente o *User* do Django, porém como classe abstrata. 
-- *AbstractBaseUser*: É classe base, sem a maioria dos atributos da classe *User*. É útil quando não temos interesse nesses atributos padrão.
-- A não ser que você tenha um bom motivo, recomendo herdar de *AbstractUser*;
-- [Referência](https://docs.djangoproject.com/en/5.1/topics/auth/customizing/).
+# Cookies - Características
+- Armazenados no **cliente** (navegador);
+- Limite de tamanho (~4KB por cookie);
+- Podem ser visualizados/editados pelo usuário;
+- **Nunca armazene dados sensíveis** diretamente em cookies!
+- Usados para: preferências, rastreamento, identificação de sessão.
 
 ---
-# Exemplos
-- Classe *User* customizada (`models.py`):
+# Cookies no Django - Escrevendo
 ```python
-from django.db import models
-from django.contrib.auth.models import AbstractUser
+def minha_view(request):
+    response = render(request, 'pagina.html')
 
-class User(AbstractUser): # ou AbstractBaseUser
-  cpf = models.CharField(max_length=11, unique=True) # exemplo
+    # Define um cookie
+    response.set_cookie('nome', 'valor')
+
+    # Com opções
+    response.set_cookie(
+        'preferencia',
+        'escuro',
+        max_age=3600*24*30,  # 30 dias em segundos
+        httponly=True,       # não acessível via JS
+        secure=True,         # apenas HTTPS
+    )
+
+    return response
 ```
-- Devemos adicionar a configuração (`settings.py`)
+
+---
+# Cookies no Django - Lendo
 ```python
-AUTH_USER_MODEL = "nomedoapp.User"
+def minha_view(request):
+    # Lê um cookie
+    nome = request.COOKIES.get('nome', 'valor_padrao')
+
+    # Verifica se existe
+    if 'preferencia' in request.COOKIES:
+        preferencia = request.COOKIES['preferencia']
+
+    return render(request, 'pagina.html', {'nome': nome})
 ```
 
 ---
-# Exemplos
-- Classe de *Perfil*, que adiciona campos extras sem alterar *User*;
-- Exemplo (`models.py`):
+# Cookies no Django - Deletando
 ```python
-from django.db import models
-from django.contrib.auth.models import User
+def logout_view(request):
+    response = redirect('home')
 
-class Perfil(models.Model):
-  user = models.OneToOneField(User, on_delete=models.CASCADE)
-  cpf = models.CharField(max_length=11, unique=True) # exemplo
+    # Remove o cookie
+    response.delete_cookie('nome')
+
+    return response
 ```
 
 ---
-# Exemplos
-- No caso do *Perfil*, podemos acessar os dados extras com:
+# Sessão (Session)
+- Mecanismo para armazenar dados temporários **no servidor**;
+- Cada usuário recebe um ID de sessão único;
+- O ID é armazenado em um cookie no navegador;
+- Os dados ficam seguros no servidor;
+- Funciona mesmo com usuários anônimos (não logados).
+
+---
+# Sessão no Django
+- Habilitada por padrão;
+- Middleware: `django.contrib.sessions.middleware.SessionMiddleware`
+- App: `django.contrib.sessions` em `INSTALLED_APPS`
+- Por padrão, armazena na tabela `django_session` do banco.
+
+---
+# Middleware
+- Camada de processamento entre a requisição e a view;
+- Executa código **antes** e/ou **depois** de cada view;
+- Configurado em `MIDDLEWARE` no `settings.py`;
+- Exemplos: autenticação, sessão, CSRF, segurança;
+- Cada middleware pode modificar o `request` ou o `response`.
+
+---
+# Backends de Sessão
 ```python
-usuario = User.objects.get(id=2) # pega o user com id 2
-cpf_do_user = usuario.perfil.cpf
+# settings.py
+
+# Banco de dados (padrão)
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
+# Cache (mais rápido)
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+
+# Arquivo
+SESSION_ENGINE = 'django.contrib.sessions.backends.file'
+
+# Cookie assinado (dados no cliente, mas seguros)
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 ```
 
 ---
-# Custom User
-- O Django por padrão usa o `username` como chave de login;
-- É comum usarmos `email` ou mesmo `cpf` ao invés de `username`;
-- Na customização podemos configurar isso;
-- É necessário fazer várias alterações;
-- Porém podemos reutilizar o código em outros projetos.
-
----
-# Exemplo
+# Configurações de Sessão
 ```python
-class Usuario(AbstractUser):
-    # Para usar como login, é necessário ser único
-    email = models.EmailField(max_length=255, unique=True)
-   
-    # Define qual o campo é o nome de usuário
-    USERNAME_FIELD = "email"
-    # Necessário para createsuperuser continuar funcionando
-    REQUIRED_FIELDS = ["username"]
+# settings.py
+
+# Tempo de expiração (em segundos) - padrão: 2 semanas
+SESSION_COOKIE_AGE = 1209600
+
+# Expira ao fechar o navegador
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Atualiza expiração a cada requisição
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Nome do cookie de sessão
+SESSION_COOKIE_NAME = 'sessionid'
 ```
 
 ---
-# Views padrão de autenticação
-- O Django possui um sistema completo de autenticação pronto;
-- Views de Login/Logout/Alterar Senha/etc.;
-- Views de cadastro não incluídas;
-- Templates também não incluídos;
-- Como tudo no Django, é possível customizar.
+# Usando Sessão - Escrevendo
+```python
+def adicionar_ao_carrinho(request, produto_id):
+    # A sessão funciona como um dicionário
+    carrinho = request.session.get('carrinho', [])
+    carrinho.append(produto_id)
+    request.session['carrinho'] = carrinho
 
----
-<style scoped>section { font-size: 24px; }</style>
-# URLs
-- Para utilizar as views padrão, devemos adicionar ao `config/urls.py` (ou diretamente no app):
+    # Força salvar (necessário para objetos mutáveis)
+    request.session.modified = True
+
+    return redirect('ver_carrinho')
 ```
 
-urlpatterns = [
+---
+# Usando Sessão - Lendo
+```python
+def ver_carrinho(request):
+    # Lê da sessão
+    carrinho = request.session.get('carrinho', [])
+
+    # Busca os produtos
+    produtos = Produto.objects.filter(id__in=carrinho)
+
+    return render(request, 'carrinho.html', {
+        'produtos': produtos
+    })
+```
+
+---
+# Usando Sessão - Deletando
+```python
+def limpar_carrinho(request):
+    # Remove uma chave específica
+    if 'carrinho' in request.session:
+        del request.session['carrinho']
+
+    return redirect('home')
+
+def logout_view(request):
+    # Limpa toda a sessão
+    request.session.flush()
+
+    return redirect('home')
+```
+
+---
+# Métodos Úteis da Sessão
+```python
+# Verifica se existe
+if 'chave' in request.session:
     ...
-    path("accounts/", include("django.contrib.auth.urls")),
+
+# Remove com valor padrão
+valor = request.session.pop('chave', None)
+
+# Limpa tudo
+request.session.clear()
+
+# Gera novo ID de sessão (segurança)
+request.session.cycle_key()
+
+# Define expiração específica
+request.session.set_expiry(3600)  # 1 hora
+```
+
+---
+# Exemplo: Carrinho de Compras
+- Funciona para usuários anônimos e logados;
+- Armazena IDs e quantidades dos produtos;
+- Persiste entre páginas e visitas.
+
+---
+# Carrinho - Estrutura
+```python
+# Estrutura do carrinho na sessão: {id: quantidade}
+carrinho = {
+    '1': 2,   # produto 1, quantidade 2
+    '5': 1,   # produto 5, quantidade 1
+}
+# Chaves são strings (JSON não aceita int como chave)
+```
+
+---
+# Carrinho - Adicionar Produto
+```python
+def adicionar_produto(request, produto_id):
+    # Pega o carrinho da sessão (ou dict vazio)
+    carrinho = request.session.get('carrinho', {})
+
+    # Converte para string (chave do dict)
+    produto_id = str(produto_id)
+
+    # Adiciona ou incrementa quantidade
+    carrinho[produto_id] = carrinho.get(produto_id, 0) + 1
+
+    # Salva na sessão
+    request.session['carrinho'] = carrinho
+
+    return redirect('ver_carrinho')
+```
+
+---
+<style scoped>pre { font-size: 16px; }</style>
+# Carrinho - Ver Carrinho
+```python
+def ver_carrinho(request):
+    carrinho = request.session.get('carrinho', {})
+
+    # Busca os produtos no banco
+    produtos = Produto.objects.filter(id__in=carrinho.keys())
+
+    # Adiciona a quantidade a cada produto
+    itens = []
+    for produto in produtos:
+        qtd = carrinho[str(produto.id)]
+        itens.append({
+            'produto': produto,
+            'quantidade': qtd,
+            'subtotal': produto.preco * qtd
+        })
+
+    return render(request, 'carrinho.html', {'itens': itens})
+```
+
+---
+# Carrinho - Remover Produto
+```python
+def remover_produto(request, produto_id):
+    carrinho = request.session.get('carrinho', {})
+    produto_id = str(produto_id)
+
+    # Remove o produto se existir
+    if produto_id in carrinho:
+        del carrinho[produto_id]
+        request.session['carrinho'] = carrinho
+
+    return redirect('ver_carrinho')
+```
+
+---
+# Carrinho - Template
+```django
+<h1>Seu Carrinho</h1>
+
+{% for item in itens %}
+<div class="item">
+    <h3>{{ item.produto.nome }}</h3>
+    <p>Preço: R$ {{ item.produto.preco }}</p>
+    <p>Quantidade: {{ item.quantidade }}</p>
+    <p>Subtotal: R$ {{ item.subtotal }}</p>
+    <a href="{% url 'remover_produto' item.produto.id %}">Remover</a>
+</div>
+{% empty %}
+<p>Carrinho vazio.</p>
+{% endfor %}
+```
+
+---
+# Context Processors
+- Funções que adicionam variáveis ao contexto de **todos** os templates;
+- Evita repetir código nas views;
+- Útil para dados globais: usuário, carrinho, configurações, menus.
+
+---
+# Context Processors Padrão
+```python
+# settings.py - já vem configurado
+TEMPLATES = [{
     ...
-]
+    'OPTIONS': {
+        'context_processors': [
+            'django.template.context_processors.debug',
+            'django.template.context_processors.request',  # request
+            'django.contrib.auth.context_processors.auth', # user, perms
+            'django.contrib.messages.context_processors.messages',
+        ],
+    },
+}]
 ```
-- Os *names* nas URLs (para usar com a tag `url` nos templates) são: `login`, `logout`, `password_change`, `password_change_done`, `password_reset`, `password_reset_done`, `password_reset_confirm`, `password_reset_complete`.
+- Por isso `{{ user }}` e `{{ request }}` funcionam em qualquer template!
 
 ---
-# URLs
-- Para customizar as URLs e outros parâmetros das *views* podemos adicionar um a um no `urls.py`:
-```
-from django.contrib.auth import views as auth_views
+# Criando um Context Processor
+```python
+# app/context_processors.py
 
-urlpatterns = [
+def carrinho_context(request):
+    """Disponibiliza o carrinho em todos os templates"""
+    from .cart import Carrinho
+    return {
+        'carrinho': Carrinho(request)
+    }
+
+def configuracoes_site(request):
+    """Configurações globais do site"""
+    return {
+        'SITE_NAME': 'Minha Loja',
+        'SITE_EMAIL': 'contato@minhaloja.com',
+    }
+```
+
+---
+# Registrando o Context Processor
+```python
+# settings.py
+TEMPLATES = [{
     ...
-    path('login/', auth_views.LoginView.as_view(), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
-    path('password_change/', auth_views.PasswordChangeView.as_view(), name='password_change'),
-    path('password_change/done/', auth_views.PasswordChangeDoneView.as_view(), name='password_change_done'),
-    path('password_reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
-    path('password_reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
-    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
-    ...
-]
+    'OPTIONS': {
+        'context_processors': [
+            'django.template.context_processors.debug',
+            'django.template.context_processors.request',
+            'django.contrib.auth.context_processors.auth',
+            'django.contrib.messages.context_processors.messages',
+            # Nossos context processors
+            'app.context_processors.carrinho_context',
+            'app.context_processors.configuracoes_site',
+        ],
+    },
+}]
 ```
 
 ---
-# Configurações Úteis
+# Usando no Template
+```django
+<!-- Em qualquer template, sem passar na view -->
+<header>
+    <h1>{{ SITE_NAME }}</h1>
+    <nav>
+        <a href="{% url 'carrinho' %}">
+            Carrinho ({{ carrinho.carrinho|length }} itens)
+        </a>
+    </nav>
+</header>
 ```
-AUTH_USER_MODEL = "usuarios.User"
+- As variáveis estão disponíveis em **todos** os templates!
 
-LOGIN_URL = "login"
-LOGOUT_REDIRECT_URL = "index"
-LOGIN_REDIRECT_URL = "index"
+---
+# Exemplo: Menu Dinâmico
+```python
+# context_processors.py
+def menu_categorias(request):
+    from .models import Categoria
+    return {
+        'menu_categorias': Categoria.objects.filter(ativo=True)
+    }
+```
+```django
+<!-- base.html -->
+<nav>
+    {% for cat in menu_categorias %}
+        <a href="{{ cat.get_absolute_url }}">{{ cat.nome }}</a>
+    {% endfor %}
+</nav>
 ```
 
 ---
-<style scoped>section { font-size: 24px; }</style>
-# Templates
-- Os *templates* devem ser colocados em `templates/registration` por padrão;
-- Os nomes são respectivamente: `login.html`, `logged_out.html`, `password_change_form.html`, `password_change_done.html`, `password_reset_form.html`, `password_reset_done.html`, `password_reset_confirm.html`, `password_reset_complete`.
-- Também é possível customizar com:
+# Context Processor com Lógica
+```python
+# context_processors.py
+def notificacoes(request):
+    if request.user.is_authenticated:
+        from .models import Notificacao
+        nao_lidas = Notificacao.objects.filter(
+            usuario=request.user,
+            lida=False
+        ).count()
+        return {'notificacoes_nao_lidas': nao_lidas}
+    return {'notificacoes_nao_lidas': 0}
 ```
-path("change-password/", 
-    auth_views.PasswordChangeView.as_view(template_name="change-password.html"),
-),
-```
-- Dica: é possível ver os templates que Django Admin usa [aqui](https://github.com/django/django/tree/main/django/contrib/admin/templates/registration).
 
 ---
-# Forms
-- Apesar de ser necessário criar os *templates* os forms já estão disponíveis;
-- Basta usar `{{ form  }}`;
-- Assim como os forms comuns é possível customizar ou construir o form diretamente;
-- Esses forms podem ser utilizados diretamente em outras partes do sistema, como o *PasswordChangeForm*;
-- Outro form importante é o *UserCreationForm* que pode ser utilizado na página de registro.
-
----
-# Forms
-- Os forms podem ser customizados herdando do form original;
-- Por exemplo, para remover o campo `username` quando não for necessário.
-
----
-# Recuperação de Senha
-- O Django já gera o email com o link para recuperação de senha;
-- Assim como os outros, precisa ter os templates em `registration`;
-- Para que o email seja enviado, é necessário ter um servidor de emails e configurar o `EMAIL_BACKEND` no `settings.py`;
-- Backend para testes que apenas imprime o email no terminal:
-- `EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"`
-
----
-# Limitando acesso a usuários logados
-- Quando usamos o *decorator* `@login_required` em uma view, apenas usuários logados terão acesso ao recurso;
-- Caso o usuário não esteja logado, ele será redirecionado para `LOGIN_URL`, definida no `settings.py`
+# Cuidados com Context Processors
+- Executam em **toda** requisição que renderiza template;
+- Evite queries pesadas;
+- Use cache quando apropriado;
+- Mantenha simples e focado.
 
 ---
 # Referências
-- https://docs.djangoproject.com/en/5.1/topics/auth/
+- https://docs.djangoproject.com/en/5.1/topics/http/sessions/
+- https://docs.djangoproject.com/en/5.1/ref/request-response/#django.http.HttpRequest.COOKIES
+- https://docs.djangoproject.com/en/5.1/ref/templates/api/#writing-your-own-context-processors
 
 ---
 # <!--fit--> Dúvidas? 🤔

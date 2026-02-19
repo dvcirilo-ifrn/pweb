@@ -4,7 +4,7 @@ size: 4:3
 marp: true
 paginate: true
 _paginate: false
-title: Aula 16: RichText/Formsets
+title: Aula 16: Introdução ao JavaScript
 author: Diego Cirilo
 
 ---
@@ -19,612 +19,672 @@ img {
 
 ### Prof. Diego Cirilo
 
-**Aula 16**: Formsets
+**Aula 16**: Introdução ao JavaScript
 
 ---
-# Formsets
-- Conjuntos (sets) de forms;
-- Permite exibir e salvar mais de uma cópia de um form em uma mesma página;
-- Ex. adicionar várias tarefas de uma só vez;
-- Faz muito sentido quando utilizado com JS/AJAX.
+# Introdução
+- Até agora as funcionalidades do sistema web estão no servidor (*back-end*);
+- O servidor recebe as requisições, processa/acessa dados e *monta* o HTML;
+- As páginas HTML são enviadas *prontas* para o cliente (navegador);
+- Depois de enviado ao cliente, o servidor não tem mais controle sobre a página;
+- Os sistemas atuais não estão mais limitados a isso.
 
 ---
-# Exemplo
-- Considerando um model Tarefa e um ModelForm TarefaForm (feitos normalmente)
-- No forms.py
-```python
-from django import forms
-from django.forms import formset_factory
-from .models import Tarefa
-
-class TarefaForm(forms.ModelForm):
-    class Meta:
-        model = Tarefa
-        fields = "__all__"
-
-
-TarefaFormSet = formset_factory(TarefaForm, extra=2)  # 2 forms por padrão
-```
+# JavaScript
+- Linguagem *interpretada*, com tipagem dinâmica e multi-paradigma;
+- Desenvolvida nos anos 90 para **dinamizar** páginas web;
+- Permite alterar o conteúdo da página no lado do cliente;
+- É executada por uma *engine* no navegador;
+- Em meados dos anos 2000 surgiram os *runtimes* nativos, como o Node.js;
+- Hoje em dia é uma linguagem de uso geral (*full-stack*).
 
 ---
-# Exemplo
-- No views.py:
-```python
-from django.shortcuts import render, redirect
-from .forms import TarefaFormSet
+# Runtimes do JS
+- Nativas:
+    - Ambiente de execução de JavaScript *server-side*;
+    - Oferece APIs para acessar o sistema de arquivos, redes e outras funcionalidades do servidor;
+    - Exemplos: Node.js, Deno, Bun;
+- Browser Engines:
+    - V8 (Chrome, Edge), SpiderMonkey (Firefox), JavaScriptCore (Safari);
+    - Executam JavaScript diretamente nos navegadores, oferecendo suporte para aplicações web interativas.
 
-def criar_tarefas(request):
-    if request.method == 'POST':
-        formset = TarefaFormSet(request.POST)
-        if formset.is_valid():
-            for form in formset:       # Fazemos o for pois são vários forms
-                if form.cleaned_data:  
-                    task = form.save()  
-            return redirect('success_url')  
-    else:
-        formset = TarefaFormSet()  # Cria o formset vazio
+---
+# JavaScript em PSI
+- Nessa disciplina utilizaremos o JS no *browser*;
+- Os objetivos são:
+    - Melhorar a interface com a manipulação do DOM;
+    - Criar páginas mais dinâmicas;
+    - Trocar informações com servidor sem recarregar a página (AJAX).
 
-    context = {
-        'formset': formset
+---
+# Executando o JS
+- No *browser*:
+    - É possível usar o *console* do navegador;
+    - É possível embutir o JS em arquivos HTML (ou templates Django);
+        - Tag `<script></script>`;
+- É possível também executar nativamente usando um *runtime* como Node.js, Deno, etc;
+    - Não é nosso objetivo agora.
+
+---
+# Embutindo o JS no HTML
+- Podemos escrever o JS diretamente no arquivo HTML, dentro da tag `<script>`;
+- Podemos separar o código JS em arquivos estáticos `.js`;
+- No HTML é carregado com:
+    - `<script src="meuscript.js"></script>`;
+- No Django usamos a *tag* `static`:
+    - `<script src="{% static 'meuscript.js' %}"></script>`;
+
+---
+# Embutindo o JS no HTML
+- A tag `<script>` pausa o carregamento do HTML para baixar e executar o JS;
+- A ordem importa!
+- Normalmente os *scripts* JS são carregados no final do arquivo, antes do `</body>`:
+    - Não atrapalha o carregamento do HTML;
+    - "Garante" que DOM já foi toda carregada antes.
+
+---
+# Embutindo o JS no HTML
+<style scoped>section { font-size: 24px; }</style>
+- É possível importar scripts no `<head>`, como é feito com o CSS;
+- Para garantir que só sejam executados com o DOM carregado usamos o atributo `defer`:
+    - `<script defer src="meuscript.js"></script>`
+- A vantagem em relação a colocar a tag no final do `<body>` é que o *script* é baixado junto com a página;
+- A desvantagem é que os blocos `<script>` *inline* não terão acesso às funções importadas dessa forma, pois serão carregadas antes;
+- A ordem de carregamento importa!
+
+---
+# Embutindo o JS no HTML
+- Em um bloco `<script>` *inline*, podemos garantir que o código só será executado após o carregamento completo do conteúdo com:
+```js
+<script>
+    window.onload = function () {
+        // codigo executado apenas após o
+        // carregamento completo
+        // da pagina
     }
-    return render(request, 'criar_tarefas.html', context)
+</script>
 ```
 
 ---
-# Exemplo
-- No template:
-```django
-...
-<form method="post">
-    {% csrf_token %}
-    {{ formset.management_form }}  <!-- Necessário para formsets -->
-    
-    <!-- Carrega os forms um por um -->
-    {% for form in formset %}
-        <div class="form">
-            {{ form }}
-        </div>
-        <hr>
-    {% endfor %}
-    
-    <button type="submit">Save</button>
-</form>
-...
+# Sintaxe JS
+- A sintaxe é parecida com C/C++/Java;
+- Usa `;` para indicar o fim de uma diretiva;
+- Usa `{}` para abrir e fechar diretivas, funções, etc;
+- O *whitespace* não importa, ao contrário do Python;
+- Comentários com `//` (linha) ou `/* etc */` (bloco).
+
+---
+# Sintaxe JS
+- Comumente usamos:
+    - camelCase para nome de funções e variáveis;
+    - Um espaço antes do `{}`;
+    - [*Style Guide*](https://javascript.info/coding-style)
+
+---
+# Declarações
+- Variáveis podem ser declaradas com:
+    - Automaticamente (não recomendado);
+    - `var` - Escopo global com *hoisting* (*legado*);
+    - `let` - Variável *normal* com escopo de bloco;
+    - `const` - Escopo de bloco, o valor não pode ser atribuído novamente;
+- No caso do `const`, se o valor for um objeto/array, o conteúdo do objeto pode ser modificado.
+
+---
+# Declarações
+- *Hoisting* (içamento):
+    - Joga as declarações automaticamente para o topo do script;
+    - Permite usar variáveis/funções que ainda serão declaradas;
+    - Funciona com `var` e declaração de funções;
+    - Pode ser uma fonte de *bugs* se não for tratado com cuidado.
+- O uso de `var` [não é mais recomendado](https://google.github.io/styleguide/jsguide.html#features-local-variable-declarations), mas ainda existe em exemplos de código antigos;
+
+---
+# Exemplos
+```js
+casa = "IFRN";
+casa = 8; //funciona
+var casa; //declarou depois de usar, funciona e não perde o conteúdo (hoisting)
+
+// recomendado atualmente
+let rua = "Principal";
+rua = "Rua de Cima";
+rua = 77; //funciona
+let rua; //erro! não pode declarar novamente
+
+const bairro = "Centro";
+bairro = "Mirassol"; //não funciona!
 ```
 
 ---
-# Editar Formsets
-- Caso seja necessário carregar dados no formulário, como em uma view de editar:
-- No views.py
-```python
-from .models import Tarefa
-from .forms import TarefaFormSet
+# Tipo de dados
+- O JavaScript tem tipagem *dinâmica* e *fraca*;
+- `var` e `let` podem receber tipos de dados diferentes;
+- Tipos primitivos:
+    - String, Number, Bigint, Boolean, Undefined, Null, Symbol;
+- O resto é objeto (*Object*).
 
-def editar_tarefas(request):
-    if request.method == 'POST':
-        formset = TaskFormSet(request.POST)
-        if formset.is_valid():
-            for form in formset:
-                if form.cleaned_data:
-                    form.save()
-            return redirect('success_url')
-    else:
-        tarefas = Tarefas.objects.all()
-        initial_data = [{'title': task.title, 'description': task.description, 'completed': task.completed} for task in tasks]
-        lista_tarefas = []
-        for tarefa in tarefas:
-            lista_tarefas.append(tarefa)
-        formset = TarefasFormSet(initial=lista_tarefas)
-
-    context = {
-        'formset': formset,
+---
+# Objetos JS
+- JavaScript Object Notation (JSON):
+```js
+const bejeto = {
+    nome: "Ana",
+    idade: 20,
+    profissao: "Desenvolvedora",
+    saudacao: function() {
+        return `Olá, meu nome é ${this.nome}.`;
     }
-
-    return render(request, 'editar_tarefas.html', context)
+};
 ```
 
 ---
-# Management Form
-- O `management_form` é essencial para o funcionamento do formset;
-- Contém campos ocultos que controlam o formset:
-    - `TOTAL_FORMS` - número total de forms
-    - `INITIAL_FORMS` - forms com dados iniciais
-    - `MIN_NUM_FORMS` - mínimo de forms
-    - `MAX_NUM_FORMS` - máximo de forms
-- Sem ele, o Django não consegue processar o formset!
-
----
-# Parâmetros do formset_factory
-```python
-TarefaFormSet = formset_factory(
-    TarefaForm,
-    extra=2,           # forms extras vazios
-    max_num=10,        # máximo de forms
-    min_num=1,         # mínimo de forms
-    validate_min=True, # valida mínimo
-    validate_max=True, # valida máximo
-    can_delete=True,   # permite marcar para deletar
-    can_order=True,    # permite ordenar
-)
+# Strings
+- Podem ser delimitadas com:
+    - \`...\`
+    - "..."
+    - '...'
+- O \`...\` é chamado de *string literal* e permite interpolação, múltiplas linhas, etc.
+```js
+const cor = "azul";
+const informacao = `O display é ${cor}.`;
 ```
 
 ---
-# ModelFormSet
-- Quando trabalhamos diretamente com Models;
-- Usa `modelformset_factory` ao invés de `formset_factory`;
-- Simplifica o código pois já faz o CRUD automaticamente.
-```python
-from django.forms import modelformset_factory
-from .models import Tarefa
-
-TarefaFormSet = modelformset_factory(
-    Tarefa,
-    fields=['titulo', 'descricao', 'concluida'],
-    extra=2
-)
+# Condicionais
+- `if`:
+```js
+if (media > 60) {
+  alert( 'Aprovado!' );
+} else if (media > 40) {
+  alert( 'Recuperação!' );
+} else {
+  alert( 'Reprovado!' );
+}
+```
+- Operador ternário:
+```js
+let resultado = (idade > 18) ? "acesso permitido" : "acesso negado";
 ```
 
 ---
-# ModelFormSet na View
-```python
-def gerenciar_tarefas(request):
-    if request.method == 'POST':
-        formset = TarefaFormSet(request.POST)
-        if formset.is_valid():
-            formset.save()  # salva todos de uma vez!
-            return redirect('lista_tarefas')
-    else:
-        formset = TarefaFormSet(queryset=Tarefa.objects.all())
-
-    return render(request, 'gerenciar_tarefas.html', {'formset': formset})
-```
-- O `queryset` define quais objetos serão carregados para edição.
-
----
-# Inline FormSets
-- Para relações entre models (ForeignKey);
-- Ex: Pedido com vários Itens;
-- Usa `inlineformset_factory`;
-```python
-from django.forms import inlineformset_factory
-from .models import Pedido, ItemPedido
-
-ItemFormSet = inlineformset_factory(
-    Pedido,           # model pai
-    ItemPedido,       # model filho
-    fields=['produto', 'quantidade', 'preco'],
-    extra=3,
-    can_delete=True
-)
+# Condicionais
+- `switch`
+```js
+switch (a) {
+  case 1:
+    alert( 'Primeiro!' );
+    break;
+  case 2:
+    alert( 'Segundo!' ); // sem o break;
+  case 3:
+    alert( 'Terceiro!' );
+    break;
+  default:
+    alert( "Desclassificado!" );
+}
 ```
 
 ---
-# Inline FormSets - Models
-```python
-# models.py
-class Pedido(models.Model):
-    cliente = models.CharField(max_length=100)
-    data = models.DateField(auto_now_add=True)
-
-class ItemPedido(models.Model):
-    pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE)
-    produto = models.CharField(max_length=100)
-    quantidade = models.IntegerField()
-    preco = models.DecimalField(max_digits=10, decimal_places=2)
+# Operadores de comparação
+- `==` igual, mas aceita tipos de dados diferentes;
+- `===` igual até no tipo;
+- `>, >=, <, <=, !=, !==`;
+```js
+const a = 5;
+const b = "5";
+if (a == b){
+  // é verdade!
+}
+if (a === b){
+  // falso!
+}
 ```
 
 ---
-<style scoped>pre { font-size: 16px; }</style>
-# Inline FormSets - View
-```python
-def criar_pedido(request):
-    if request.method == 'POST':
-        form = PedidoForm(request.POST)
-        formset = ItemFormSet(request.POST)
-        if form.is_valid() and formset.is_valid():
-            pedido = form.save()
-            formset.instance = pedido  # associa os itens ao pedido
-            formset.save()
-            return redirect('lista_pedidos')
-    else:
-        form = PedidoForm()
-        formset = ItemFormSet()
+<style scoped>section { font-size: 24px; }</style>
+<style scoped>pre { font-size: 18px; }</style>
+# Laços
+- `for`
+```js
+for (let i = 0; i < 3; i++) {
+  alert(i);
+}
+```
 
-    return render(request, 'criar_pedido.html', {
-        'form': form,
-        'formset': formset
-    })
+- `while`
+```js
+while (i < 3) { // shows 0, then 1, then 2
+  alert( i );
+  i++;
+}
+```
+
+- `do..while`
+```js
+do {
+  alert( i );
+  i++;
+} while (i < 3);
 ```
 
 ---
-# Inline FormSets - Template
-```django
-<form method="post">
-    {% csrf_token %}
+<style scoped>section { font-size: 24px; }</style>
+# Funções no JS
+- Funções padrão:
+```js
+function somar(a, b) {
+    return a + b;
+}
+```
 
-    <h2>Dados do Pedido</h2>
-    {{ form.as_p }}
+- Funções anônimas:
+```js
+const saudacao = function(nome) {
+    return `Olá, ${nome}!`;
+};
+```
 
-    <h2>Itens do Pedido</h2>
-    {{ formset.management_form }}
-    {% for item_form in formset %}
-        <div class="item">
-            {{ item_form.as_p }}
-        </div>
-    {% endfor %}
-
-    <button type="submit">Salvar Pedido</button>
-</form>
+- *Arrow functions*
+```js
+const multiplicar = (a, b) => {
+    const resultado = a * b;
+    return resultado;
+};
 ```
 
 ---
-<style scoped>pre { font-size: 16px; }</style>
-# Editando com Inline FormSets
-```python
-def editar_pedido(request, pk):
-    pedido = get_object_or_404(Pedido, pk=pk)
+# *Arrow functions*
+- Retornam o valor por padrão
+```js
+hello = () => "Hello World!";
+```
 
-    if request.method == 'POST':
-        form = PedidoForm(request.POST, instance=pedido)
-        formset = ItemFormSet(request.POST, instance=pedido)
-        if form.is_valid() and formset.is_valid():
-            form.save()
-            formset.save()
-            return redirect('lista_pedidos')
-    else:
-        form = PedidoForm(instance=pedido)
-        formset = ItemFormSet(instance=pedido)  # carrega itens existentes
-
-    return render(request, 'editar_pedido.html', {
-        'form': form,
-        'formset': formset
-    })
+- Se houver apenas um parâmetro
+```js
+hello = val => "Hello " + val;
 ```
 
 ---
-# Deletando Itens
-- Com `can_delete=True`, cada form tem um checkbox DELETE;
-- Ao salvar, os marcados são removidos automaticamente;
-```django
-{% for item_form in formset %}
-    <div class="item">
-        {{ item_form.as_p }}
-        {% if item_form.instance.pk %}
-            {{ item_form.DELETE }} Remover
-        {% endif %}
-    </div>
-{% endfor %}
+# Funções *Callback*
+- Funções que são passadas como parâmetro para outra função;
+- Permite que a função original tenha controle sobre o momento de chamar a segunda função, mesmo que não saiba o nome dela;
+- Muito usado no JS;
+- Podemos passar uma função anônima *inline* como parâmetro;
+- Ou definir a função antes, e passar apenas seu nome.
+
+---
+<style scoped>section { font-size: 22px; }</style>
+<style scoped>pre { font-size: 18px; }</style>
+# Exemplo
+```js
+function minhaFuncao(par1, par2, outraFuncao) {
+    let soma = par1 + par2;
+    outraFuncao(soma); //callback
+}
+
+let resultado = minhaFuncao(3, 5, function(valor){
+    //estou dentro do callback
+    console.log(valor);
+    return valor;
+});
+
+// como arrow function
+resultado = minhaFuncao(3, 5, (valor) => {
+    console.log(valor);
+    return valor;
+});
+
+// definindo a função antes
+function funcaoNova(resultado){
+    console.log(resultado);
+}
+
+//passando a função definida
+minhaFuncao(3, 5, funcaoNova);
 ```
 
 ---
-# Validação de Formsets
-- Podemos criar validações personalizadas;
-- Sobrescrevemos o método `clean` do BaseFormSet:
-```python
-from django.forms import BaseFormSet
-
-class BaseItemFormSet(BaseFormSet):
-    def clean(self):
-        super().clean()
-        if any(self.errors):
-            return
-
-        # verifica se há pelo menos um item
-        forms_preenchidos = [f for f in self.forms if f.cleaned_data]
-        if len(forms_preenchidos) < 1:
-            raise forms.ValidationError("Adicione pelo menos um item.")
+# Arrays
+- Funcionam como listas do Python;
+- Coleção indexada de objetos;
+- Ex.
+```js
+const meuArray = [];
+meuArray = ["coisa1", {coisa2: "coisa 2"}, 5]; // não pode!
+meuArray.push("coisa1");
+meuArray.push({coisa2: "coisa 2"});
+meuArray.push(5);
+meuArray[6] = "coisa 6";
+console.log(meuArray[0]);
 ```
 
 ---
-# Usando Validação Personalizada
-```python
-TarefaFormSet = formset_factory(
-    TarefaForm,
-    formset=BaseItemFormSet,  # usa a classe personalizada
-    extra=2
-)
-```
-
----
-# Formsets com Crispy Forms
-- Podemos usar o Crispy Forms com formsets;
-```django
-{% load crispy_forms_tags %}
-
-<form method="post">
-    {% csrf_token %}
-    {{ formset.management_form }}
-
-    {% for form in formset %}
-        <div class="card mb-3">
-            <div class="card-body">
-                {{ form|crispy }}
-            </div>
-        </div>
-    {% endfor %}
-
-    <button type="submit" class="btn btn-primary">Salvar</button>
-</form>
-```
-
----
-# Adicionando Forms com JavaScript
-- Podemos adicionar novos forms dinamicamente;
-- Precisamos atualizar o `TOTAL_FORMS` do management form;
-- O Django espera que os campos sigam o padrão `form-N-campo`.
-
----
-<style scoped>pre { font-size: 14px; }</style>
-# Exemplo - Template
-```django
-<form method="post" id="formset">
-    {% csrf_token %}
-    {{ formset.management_form }}
-
-    <div id="forms-container">
-        {% for form in formset %}
-            <div class="form-item">
-                {{ form.as_p }}
-            </div>
-        {% endfor %}
-    </div>
-
-    <button type="button" id="add-form">Adicionar</button>
-    <button type="submit">Salvar</button>
-</form>
-
-<!-- Template vazio para clonar -->
-<div id="empty-form" style="display:none;">
-    {{ formset.empty_form.as_p }}
-</div>
-```
-
----
-<style scoped>pre { font-size: 15px; }</style>
-# Exemplo - JavaScript
-```javascript
-document.querySelector("#add-form").addEventListener("click", function() {
-    const container = document.querySelector("#forms-container");
-    const totalForms = document.querySelector("#id_form-TOTAL_FORMS");
-    const formNum = parseInt(totalForms.value);
-
-    // Clona o template vazio
-    const emptyForm = document.querySelector("#empty-form").innerHTML;
-
-    // Substitui __prefix__ pelo número do form
-    const newForm = emptyForm.replace(/__prefix__/g, formNum);
-
-    // Adiciona o novo form
-    container.insertAdjacentHTML("beforeend",
-        `<div class="form-item">${newForm}</div>`
-    );
-
-    // Atualiza o contador
-    totalForms.value = formNum + 1;
+# Arrays
+- Percorrendo Arrays:
+```js
+meuArray.forEach( function (item) {
+    console.log(item);
 });
 ```
 
 ---
-# Removendo Forms com JavaScript
-```javascript
-function removerForm(button) {
-    const formItem = button.closest(".form-item");
-    const deleteInput = formItem.querySelector("input[name$='-DELETE']");
+# O que é o DOM?
+- *Document Object Model* (Modelo de Objeto do Documento);
+- Representação da página HTML como uma árvore de objetos;
+- Cada elemento HTML vira um *nó* (node) na árvore;
+- O JS acessa e manipula essa árvore através do objeto `document`;
+- Modificar o DOM = modificar a página em tempo real.
 
-    if (deleteInput) {
-        // Se já existe no banco, marca para deletar
-        deleteInput.checked = true;
-        formItem.style.display = "none";
-    } else {
-        // Se é novo, apenas remove do DOM
-        formItem.remove();
-        // Atualiza TOTAL_FORMS
-        const totalForms = document.querySelector("#id_form-TOTAL_FORMS");
-        totalForms.value = parseInt(totalForms.value) - 1;
-    }
-}
+---
+# Estrutura do DOM
+- O `document` é a raiz da árvore;
+- Cada elemento tem relações de parentesco:
+    - `parentElement` - elemento pai
+    - `children` - elementos filhos
+    - `nextElementSibling` - próximo irmão
+    - `previousElementSibling` - irmão anterior
+- Podemos navegar pela árvore usando essas propriedades.
+
+---
+# Selecionando Elementos
+- Por ID (retorna um elemento):
+    - `document.getElementById('meuId')`
+- Por seletor CSS (retorna o primeiro):
+    - `document.querySelector('.classe')`
+    - `document.querySelector('#id')`
+    - `document.querySelector('div.classe')`
+- Por seletor CSS (retorna todos):
+    - `document.querySelectorAll('p')` - retorna NodeList
+
+---
+# Selecionando Elementos
+- Exemplos:
+```js
+// por ID
+const botao = document.getElementById("meuBotao");
+
+// por classe (primeiro elemento)
+const card = document.querySelector(".card");
+
+// seletor composto
+const link = document.querySelector("nav a.active");
+
+// todos os elementos
+const itens = document.querySelectorAll("ul li");
+itens.forEach(item => console.log(item));
 ```
 
 ---
-# Quando usar FormSets?
-- Cadastro em lote (várias tarefas, produtos, etc.);
-- Relações um-para-muitos (pedido com itens);
-- Formulários dinâmicos (adicionar/remover campos);
-- Edição em massa de registros.
+# Modificando Conteúdo
+- `textContent` - apenas texto (mais seguro):
+    - `element.textContent = 'Novo texto'`
+- `innerHTML` - aceita HTML (cuidado com XSS!):
+    - `element.innerHTML = '<p>Novo HTML</p>'`
+- `innerText` - texto visível (considera CSS):
+    - `element.innerText = 'Texto visível'`
 
 ---
-# Rich Text no Django
-- Campos de texto com formatação (negrito, itálico, listas, etc.);
-- Útil para blogs, descrições de produtos, conteúdo editorial;
-- O Django não tem suporte nativo a Rich Text;
-- Precisamos usar bibliotecas de terceiros.
+# Modificando Conteúdo
+```js
+const div = document.querySelector("#minhaDiv");
 
----
-# O que é um Editor Rich Text?
-- Editor WYSIWYG (*What You See Is What You Get*);
-- Interface visual para formatar texto;
-- Gera HTML que é salvo no banco de dados;
-- Exemplos: TinyMCE, CKEditor, Quill, Summernote.
+// apenas texto
+div.textContent = "Olá, mundo!";
 
----
-# django-tinymce
-- Integra o editor TinyMCE ao Django;
-- Fácil de configurar;
-- Funciona bem com o Django Admin;
-- Instalação:
-```bash
-pip install django-tinymce
+// com HTML (cuidado!)
+div.innerHTML = "<strong>Texto em negrito</strong>";
+
+// usando template literals
+const nome = "João";
+div.innerHTML = `<p>Bem-vindo, ${nome}!</p>`;
 ```
 
 ---
-# Configuração - settings.py
-```python
-INSTALLED_APPS = [
-    ...
-    'tinymce',
-    ...
-]
+# Modificando Atributos
+- Ler atributo: `element.getAttribute('href')`
+- Definir atributo: `element.setAttribute('href', 'url')`
+- Remover atributo: `element.removeAttribute('disabled')`
+- Alguns atributos são propriedades diretas:
+```js
+const img = document.querySelector("img");
+img.src = "nova-imagem.jpg";
+img.alt = "Descrição da imagem";
 
-TINYMCE_DEFAULT_CONFIG = {
-    'height': 360,
-    'width': '100%',
-    'menubar': False,
-    'plugins': 'lists link image code table',
-    'toolbar': 'undo redo | formatselect | bold italic | '
-               'alignleft aligncenter alignright | '
-               'bullist numlist | link image | code',
-}
+const input = document.querySelector("input");
+input.value = "novo valor";
+input.disabled = true;
 ```
 
 ---
-# Configuração - urls.py
-```python
-from django.urls import path, include
+# Modificando Classes CSS
+- `classList` oferece métodos para manipular classes:
+```js
+const elemento = document.querySelector(".card");
 
-urlpatterns = [
-    ...
-    path('tinymce/', include('tinymce.urls')),
-    ...
-]
+elemento.classList.add("ativo");      // adiciona classe
+elemento.classList.remove("ativo");   // remove classe
+elemento.classList.toggle("ativo");   // alterna classe
+elemento.classList.contains("ativo"); // verifica (true/false)
+elemento.classList.replace("old", "new"); // substitui
 ```
 
 ---
-# Usando no Model
-```python
-from django.db import models
-from tinymce.models import HTMLField
+# Modificando Estilos Inline
+- Propriedade `style` modifica o CSS inline:
+```js
+const div = document.querySelector("div");
 
-class Artigo(models.Model):
-    titulo = models.CharField(max_length=200)
-    # Campo Rich Text
-    conteudo = HTMLField()
-    data_publicacao = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.titulo
+div.style.color = "red";
+div.style.backgroundColor = "yellow"; // camelCase!
+div.style.fontSize = "20px";
+div.style.display = "none"; // esconde elemento
+div.style.display = "block"; // mostra elemento
 ```
-- `HTMLField` substitui o `TextField` comum.
+- Prefira usar `classList` para manter CSS separado do JS.
 
 ---
-# Usando no Form
-- Se preferir usar em um Form ao invés do Model:
-```python
-from django import forms
-from tinymce.widgets import TinyMCE
-
-class ArtigoForm(forms.ModelForm):
-    conteudo = forms.CharField(widget=TinyMCE())
-
-    class Meta:
-        model = Artigo
-        fields = ['titulo', 'conteudo']
+# Criando Elementos
+- `document.createElement('tag')` cria um novo elemento;
+- O elemento ainda não está na página!
+- Precisamos inserí-lo no DOM.
+```js
+const novoItem = document.createElement("li");
+novoItem.textContent = "Item novo";
+novoItem.classList.add("item-lista");
 ```
 
 ---
-# No Django Admin
-- O `HTMLField` já funciona automaticamente no Admin;
-- Não precisa de configuração extra;
-- O editor aparece no lugar do textarea padrão.
+# Inserindo Elementos
+- `appendChild(elemento)` - adiciona no final
+- `insertBefore(novo, referencia)` - antes de outro
+- `prepend(elemento)` - no início (dentro)
+- `append(elemento)` - no final (dentro)
+```js
+const lista = document.querySelector("ul");
+const novoItem = document.createElement("li");
+novoItem.textContent = "Novo item";
 
----
-# No Template - Formulário
-```django
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Salvar</button>
-</form>
-
-<!-- Necessário para carregar o TinyMCE -->
-{{ form.media }}
+lista.appendChild(novoItem);  // adiciona no final
+lista.prepend(novoItem);      // adiciona no início
 ```
-- O `{{ form.media }}` carrega os scripts necessários.
 
 ---
-# Exibindo o Conteúdo
-- O conteúdo salvo é HTML;
-- Use o filtro `safe` para renderizar:
-```django
-<article>
-    <h1>{{ artigo.titulo }}</h1>
-    <div class="conteudo">
-        {{ artigo.conteudo|safe }}
+# Inserindo HTML
+- `insertAdjacentHTML(posição, html)` - insere HTML em posição específica:
+    - `'beforebegin'` - antes do elemento
+    - `'afterbegin'` - início do conteúdo
+    - `'beforeend'` - final do conteúdo
+    - `'afterend'` - depois do elemento
+```js
+const div = document.querySelector("#container");
+div.insertAdjacentHTML("beforeend", "<p>Novo parágrafo</p>");
+```
+
+---
+# Removendo Elementos
+```js
+const elemento = document.querySelector("#remover");
+
+// remove o próprio elemento
+elemento.remove();
+
+// remove filho específico
+const pai = document.querySelector("#lista");
+const filho = document.querySelector("#item1");
+pai.removeChild(filho);
+
+// limpa todo o conteúdo
+elemento.innerHTML = "";
+// ou
+elemento.replaceChildren();
+```
+
+---
+# Eventos DOM
+- Eventos reagem a ações do usuário ou do sistema;
+- Permitem criar interfaces interativas;
+- Exemplos de eventos:
+    - `click`, `dblclick` - cliques
+    - `mouseover`, `mouseout` - mouse
+    - `keydown`, `keyup` - teclado
+    - `submit` - envio de formulário
+    - `change`, `input` - mudança em inputs
+    - `load` - carregamento completo
+
+---
+# addEventListener
+- Sintaxe: `elemento.addEventListener('evento', callback)`
+- O *callback* é executado quando o evento ocorre:
+```js
+const botao = document.getElementById("meuBotao");
+
+botao.addEventListener("click", function() {
+  alert("Botão clicado!");
+});
+
+// com arrow function
+botao.addEventListener("click", () => {
+  alert("Botão clicado!");
+});
+```
+
+---
+# O Objeto Event
+- O *callback* recebe um objeto `event` com informações:
+```js
+botao.addEventListener("click", function(event) {
+  console.log(event.target);      // elemento clicado
+  console.log(event.type);        // tipo do evento
+  event.preventDefault();          // cancela ação padrão
+  event.stopPropagation();        // para propagação
+});
+
+// útil em formulários
+form.addEventListener("submit", (e) => {
+  e.preventDefault(); // evita recarregar a página
+  // processa os dados...
+});
+```
+
+---
+# Eventos em Múltiplos Elementos
+```js
+// adiciona evento a todos os botões
+const botoes = document.querySelectorAll(".btn");
+
+botoes.forEach(botao => {
+  botao.addEventListener("click", function() {
+    // 'this' se refere ao botão clicado
+    this.classList.toggle("ativo");
+  });
+});
+```
+
+---
+<style scoped>section { font-size: 22px; }</style>
+<style scoped>pre { font-size: 20px; }</style>
+# Exemplo
+- `teste.html`:
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Teste</title>
+    <script defer src="meuScript.js"></script>
+  </head>
+  <body>
+    <div class="conteudo outra-classe">
+      <h1>Teste</h1>
+      <button id="meuBotao">Clique aqui!</button>
+      <p>Meu conteúdo relevante.</p>  
     </div>
-</article>
-```
-- **Cuidado**: só use `safe` com conteúdo confiável (de admins/editores).
-
----
-# Segurança - XSS
-- Rich Text pode ser vetor de ataques XSS;
-- *Cross Site Scripting*;
-- O usuário pode inserir scripts maliciosos;
-- Soluções:
-    - Limitar quem pode usar o editor (apenas admins);
-    - Usar biblioteca de sanitização como `bleach`;
-    - Configurar o TinyMCE para limitar tags permitidas.
-
----
-# Sanitizando com Bleach
-```bash
-pip install bleach
-```
-```python
-import bleach
-
-ALLOWED_TAGS = ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'a', 'img']
-ALLOWED_ATTRS = {'a': ['href'], 'img': ['src', 'alt']}
-
-class Artigo(models.Model):
-    conteudo = HTMLField()
-
-    def save(self, *args, **kwargs):
-        self.conteudo = bleach.clean(
-            self.conteudo,
-            tags=ALLOWED_TAGS,
-            attributes=ALLOWED_ATTRS
-        )
-        super().save(*args, **kwargs)
+  </body>
+</html>
 ```
 
 ---
-# Configurações Úteis do TinyMCE
-```python
-TINYMCE_DEFAULT_CONFIG = {
-    'height': 400,
-    'plugins': 'lists link image table code wordcount',
-    'toolbar': 'undo redo | styles | bold italic | '
-               'alignleft aligncenter alignright | '
-               'bullist numlist outdent indent | link image table | code',
-    'content_css': '/static/css/editor.css',  # CSS personalizado
-    'valid_elements': 'p,br,strong,em,ul,ol,li,a[href],img[src|alt]',
-    'language': 'pt_BR',
-}
+<style scoped>section { font-size: 22px; }</style>
+<style scoped>pre { font-size: 20px; }</style>
+# Exemplo
+- `meuScript.js`
+```js
+const botao = document.getElementById("meuBotao");
+const conteudo = document.querySelector(".conteudo p");
+const header1 = document.querySelector(".conteudo h1")
+let contador = 0;
+botao.addEventListener("click", () => {
+  contador++;
+  if (contador < 10) {
+    conteudo.innerHTML = `<p>O botão foi clicado ${contador} vezes!</p>`;
+  } else if (contador < 16){
+    conteudo.innerHTML = `<p>O botão foi clicado ${contador} vezes! Por favor, pare!</p>`;
+    header1.innerText = "TESTE";
+    botao.innerText = "Não clique aqui!";
+    botao.style.position = "absolute";
+    botao.style.top = `${contador**2}px`;
+  } else {
+    let aviso = document.createElement('h1');
+    aviso.innerText = "PARE!!!";
+    aviso.style.fontSize = "20em";
+    aviso.style.color = "yellow";
+    document.body.style.backgroundColor = "red"
+    document.body.replaceChildren(aviso);
+  }
+});
 ```
 
 ---
-# Upload de Imagens
-- Por padrão, TinyMCE não faz upload de imagens;
-- Opções:
-    - Usar URLs externas;
-    - Configurar endpoint de upload próprio;
-    - Usar `django-filebrowser` ou similar;
-- Configuração básica (apenas URLs):
-```python
-TINYMCE_DEFAULT_CONFIG = {
-    ...
-    'image_advtab': True,
-    'image_caption': True,
-}
-```
+# Bibliotecas JS
+- No contexto da disciplina podem ser importadas na tag `<script src="biblioteca.js"></script>`;
+- A ordem importa!
+- Fornecem funcionalidades prontas;
+- Exemplos: jQuery, React, Bootstrap, PDF.js, Babylon...
+
+---
+# jQuery
+- Biblioteca criada em 2006 para simplificar o desenvolvimento JS;
+- Garantia compatibilidade entre navegadores (grande problema na época);
+- Simplificava a manipulação do DOM, eventos, animações e AJAX;
+- Foi praticamente *obrigatória* por muitos anos.
+
+---
+# jQuery
+- O JS, CSS e HTML evoluíram e absorveram funcionalidades do jQuery:
+    - `document.querySelector()` substitui `$()`
+    - `fetch()` substitui `$.ajax()`
+    - CSS3 trouxe animações e transições nativas
+    - `classList` facilita manipulação de classes
+- Hoje o jQuery está em **desuso** para novos projetos;
+- [*You might not need jQuery*](https://youmightnotneedjquery.com/)
+- Ainda aparece em projetos legados e em alguns exemplos antigos.
 
 ---
 # Referências
-- https://docs.djangoproject.com/en/5.1/topics/forms/formsets/
-- https://docs.djangoproject.com/en/5.1/topics/forms/modelforms/#model-formsets
-- https://docs.djangoproject.com/en/5.1/topics/forms/modelforms/#inline-formsets
-- https://django-tinymce.readthedocs.io/
-- https://github.com/summernote/django-summernote
+- https://javascript.info/
+- https://developer.mozilla.org/pt-BR/docs/Web/JavaScript
+- https://developer.mozilla.org/pt-BR/docs/Learn/JavaScript
 
 ---
 # <!--fit--> Dúvidas? 🤔

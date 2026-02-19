@@ -22,63 +22,70 @@ img {
 **Aula 01**: Apresentação da disciplina
 
 ---
-# Objetivos
+# Ementa
 
-- Desenvolver aplicações web com programação no cliente;
-- Desenvolver aplicações web com programação no servidor;
-- Controlar o estado e o acesso em aplicações web;
-- Desenvolver aplicações segundo o padrão de arquitetura MVC;
+Fundamentos do desenvolvimento de sistemas voltados para a Internet. Desenvolvimento de sistemas web com o apoio de framework. Utilização de persistência de dados através de mapeamento objeto-relacional. Uso de cookies e sessões. Testes de aplicações web. Tópicos relacionados ao desempenho e segurança de aplicações Web.
 
 ---
 # Objetivos
-- Construir relatórios em aplicações web;
-- Utilizar Javascript em comportamentos no desenvolvimento de aplicações web;
-- Aplicar técnicas de mapeamento objeto-relacional em aplicações web;
-- Utilizar frameworks de desenvolvimento ágil.
+
+- Compreender os fundamentos do desenvolvimento de sistemas para a Internet;
+- Desenvolver sistemas para a web, seguindo o estilo arquitetural MVC ou equivalente;
+- Conhecer e saber utilizar persistência de dados através de mecanismos de mapeamento objeto-relacional;
+- Compreender e utilizar os recursos de cookies e sessões;
+- Testar e depurar aplicações web;
+- Conhecer tópicos relacionados ao desempenho e segurança de aplicações web.
 
 ---
 # Conteúdos
 
-1. Conceitos de sistemas web
-1.1. Introdução ao serviço HTTP
-1.2. Ativação por solicitações GET e POST
-1.3. Formulários e componentes básicos
-1.4. Criação de páginas dinâmicas
-2. Controle de estado
-2.1. QueryString
-2.2. Cookies
-2.3. Controle de sessão
-2.4. Estado da página
+1. Introdução ao desenvolvimento web
+   - Conceitos básicos
+   - Arquitetura cliente-servidor
+   - Revisão dos protocolos HTTP e HTTPS
+     - Mensagens de requisição e resposta
+     - Métodos, parâmetros e códigos de retorno
+2. Framework para o desenvolvimento de aplicações web
+   - Introdução à linguagem de desenvolvimento web
+   - Introdução ao estilo arquitetural MVC (ou equivalente)
+   - Desenvolvimento de componentes de visão
+     - Temas e templates: CSS Frameworks
 
 ---
 # Conteúdos
-3. Controle de acesso
-3.1. Autenticação e autorização
-4. Acesso a bancos de dados
-4.1. Componentes de acesso a dados
-4.2. Componentes de apresentação
-4.3. Mapeamento objeto-relacional
-4.4. Linguagens de consulta
-5. Padrão MVC
-5.1. Introdução aos conceitos básicos
-5.2. Aplicando MVC a sistemas web
+
+2. Framework para o desenvolvimento de aplicações web *(cont.)*
+   - Desenvolvimento de componentes de controle
+     - Controle de estados (cookies e sessões)
+   - Desenvolvimento de componentes de modelo
+     - Persistência de dados em mecanismo de mapeamento objeto-relacional
+     - Listagem de dados com filtros
+     - Listagem de dados de forma paginada
+     - Upload de arquivos
+   - Autenticação e autorização
+   - Testes associados ao desenvolvimento de sistemas para Web
 
 ---
 # Conteúdos
-6. Programação no cliente com linguagem JavaScript
-6.1. Características da linguagem
-6.2. Frameworks e plugins
-6.3. Ajax
-7. Framework de desenvolvimento ágil
-7.1. Relatórios e gráficos
+
+3. Requisições síncronas e assíncronas
+   - Estado e situação da requisição
+4. Princípios de segurança em aplicações web
+   - Compressão de código
+   - Ataques de injeção de código
+   - Logs
+   - Captcha
+5. Desenvolvimento de projeto prático
 
 ---
 # Procedimentos Metodológicos
 
-- Projeto Integrador com a disciplina Análise e Projeto Orientados a Objetos (e Banco de Dados)
-- Aulas teóricas expositivas,
-- Aulas práticas em laboratório,
-- Desenvolvimento de projetos.
+- Aulas teóricas expositivas dialogadas;
+- Atividades individuais e/ou em grupo;
+- Exercício com auxílio das diversas tecnologias da comunicação e da informação;
+- Desenvolvimento de projetos que visem o aprofundamento e aplicação prática dos conceitos trabalhados na disciplina;
+- Aulas práticas em laboratório;
+- Esta disciplina é âncora para o **Projeto Integrador I** como proposta de projeto interdisciplinar.
 
 ---
 # Avaliação

@@ -4,7 +4,7 @@ size: 4:3
 marp: true
 paginate: true
 _paginate: false
-title: Aula 18: Class-Based Views
+title: Aula 18: Segurança
 author: Diego Cirilo
 
 ---
@@ -19,723 +19,353 @@ img {
 
 ### Prof. Diego Cirilo
 
-**Aula 18**: Class-Based Views (CBV)
+**Aula 18**: Segurança
 
 ---
-# Function-Based Views (FBV)
-- Até agora usamos apenas FBVs;
-- Views como funções que recebem `request` e retornam `response`;
+# Por que Segurança Importa?
+- Dados de usuários são responsabilidade do desenvolvedor;
+- Falhas de segurança geram prejuízo financeiro e reputacional;
+- Legislações como a LGPD (Brasil) e GDPR (Europa) impõem sanções;
+- Ataques aumentam conforme a aplicação cresce;
+- Segurança deve ser pensada desde o início, não como ajuste final.
+
+---
+# OWASP Top 10
+A Open Web Application Security Project lista as 10 vulnerabilidades mais críticas:
+1. Broken Access Control
+2. Cryptographic Failures
+3. **Injection** (SQL, XSS, etc.)
+4. Insecure Design
+5. Security Misconfiguration
+6. Vulnerable Components
+7. Authentication Failures
+8. Data Integrity Failures
+9. Security Logging Failures
+10. SSRF
+
+---
+# SQL Injection
+- Inserção de código SQL malicioso em campos de entrada;
+- Pode ler, modificar ou deletar dados do banco;
+- Exemplo clássico:
+
+```sql
+-- Input: ' OR '1'='1
+SELECT * FROM users WHERE username='' OR '1'='1';
+-- Retorna TODOS os usuários!
+```
+
+---
+# SQL Injection — Django ORM
+- O ORM do Django **protege automaticamente** via *parameterized queries*;
+- Nunca interpola strings diretamente no SQL.
+
 ```python
-def lista_produtos(request):
-    produtos = Produto.objects.all()
-    return render(request, 'produtos/lista.html', {'produtos': produtos})
-```
-- Simples e diretas;
-- Funciona bem para todos os casos.
+# SEGURO — Django escapa automaticamente
+Usuario.objects.filter(username=input_do_usuario)
 
----
-# Problema com FBVs
-- Muitas views seguem o mesmo padrão;
-- Listar objetos, exibir detalhes, criar, editar, deletar...
-- Repetimos muito código entre views similares;
-- Difícil reaproveitar lógica comum.
-
----
-# Exemplo: Views de Listagem
-```python
-def lista_produtos(request):
-    produtos = Produto.objects.all()
-    return render(request, 'lista.html', {'produtos': produtos})
-
-def lista_categorias(request):
-    categorias = Categoria.objects.all()
-    return render(request, 'lista.html', {'categorias': categorias})
-
-def lista_pedidos(request):
-    pedidos = Pedido.objects.all()
-    return render(request, 'lista.html', {'pedidos': pedidos})
-```
-- Mesmo padrão, código repetido!
-
----
-# Class-Based Views (CBV)
-- Views como classes ao invés de funções;
-- Permitem herança e reutilização de código;
-- Django oferece views genéricas prontas;
-- Menos código para operações comuns.
-
----
-# CBV Básica
-```python
-from django.views import View
-
-class MinhaView(View):
-    def get(self, request):
-        return render(request, 'pagina.html')
-
-    def post(self, request):
-        # processa formulário
-        return redirect('sucesso')
-```
-- Métodos separados para cada verbo HTTP;
-- `get()`, `post()`, `put()`, `delete()`, etc.
-
----
-# Registrando no urls.py
-```python
-from django.urls import path
-from .views import MinhaView
-
-urlpatterns = [
-    # FBV
-    path('fbv/', minha_funcao, name='fbv'),
-
-    # CBV - precisa do .as_view()
-    path('cbv/', MinhaView.as_view(), name='cbv'),
-]
-```
-- O método `.as_view()` converte a classe em uma view.
-
----
-# FBV vs CBV Simples
-```python
-# FBV
-def minha_view(request):
-    if request.method == 'POST':
-        # processa POST
-        return redirect('sucesso')
-    return render(request, 'pagina.html')
-
-# CBV
-class MinhaView(View):
-    def get(self, request):
-        return render(request, 'pagina.html')
-
-    def post(self, request):
-        return redirect('sucesso')
-```
-
----
-# Views Genéricas
-- Django oferece classes prontas para operações comuns;
-- Basta configurar alguns atributos;
-- Muito menos código!
-- Principais:
-    - `ListView` - listar objetos
-    - `DetailView` - exibir um objeto
-    - `CreateView` - criar objeto
-    - `UpdateView` - editar objeto
-    - `DeleteView` - deletar objeto
-
----
-# Customização por Herança
-- CBVs usam **herança** para customização;
-- Duas formas de alterar comportamento:
-    1. **Atributos de classe**: configurações simples
-    2. **Reescrita de métodos** (*override*): lógica personalizada
-- Essa é a metodologia padrão das CBVs do Django.
-
----
-# Reescrita de Métodos (*Override*)
-- Cada CBV tem métodos que podemos reescrever;
-- Chamamos `super()` para manter o comportamento original;
-```python
-class ProdutoListView(ListView):
-    model = Produto
-
-    def get_context_data(self, **kwargs):
-        # Chama o método original da classe pai
-        context = super().get_context_data(**kwargs)
-        # Adiciona dados extras
-        context['titulo'] = 'Meus Produtos'
-        return context
-```
-
----
-# Por que usar super()?
-- `super()` chama o método da classe pai (superclasse);
-- Mantém o comportamento padrão da view genérica;
-- Sem ele, perdemos funcionalidades importantes!
-```python
-# ERRADO - perde o contexto padrão (object_list, etc)
-def get_context_data(self, **kwargs):
-    return {'titulo': 'Produtos'}
-
-# CORRETO - mantém o contexto e adiciona mais
-def get_context_data(self, **kwargs):
-    context = super().get_context_data(**kwargs)
-    context['titulo'] = 'Produtos'
-    return context
-```
-
----
-# Principais Métodos para Reescrever
-- `get_queryset()` - filtrar/ordenar objetos
-- `get_context_data()` - adicionar variáveis ao template
-- `form_valid()` - lógica após validação do form
-- `get_success_url()` - URL de redirecionamento dinâmica
-- `get_object()` - customizar busca do objeto
-
----
-# ListView
-- Lista objetos de um model;
-```python
-from django.views.generic import ListView
-from .models import Produto
-
-class ProdutoListView(ListView):
-    model = Produto
-```
-- Busca todos os objetos;
-- Renderiza template `produto_list.html`;
-- Passa a lista como `object_list`.
-
----
-# ListView - Customizando
-```python
-class ProdutoListView(ListView):
-    model = Produto
-    template_name = 'produtos/lista.html'  # template customizado
-    context_object_name = 'produtos'       # nome da variável
-    ordering = ['-data_criacao']           # ordenação
-    paginate_by = 10                       # paginação
-```
-
----
-# ListView - Template
-```django
-<!-- produtos/lista.html -->
-<h1>Produtos</h1>
-
-<ul>
-{% for produto in produtos %}
-    <li>
-        <a href="{% url 'produto_detalhe' produto.pk %}">
-            {{ produto.nome }} - R$ {{ produto.preco }}
-        </a>
-    </li>
-{% empty %}
-    <li>Nenhum produto cadastrado.</li>
-{% endfor %}
-</ul>
-```
-
----
-# ListView - Filtrando
-```python
-class ProdutoListView(ListView):
-    model = Produto
-    template_name = 'produtos/lista.html'
-    context_object_name = 'produtos'
-
-    def get_queryset(self):
-        # Sobrescreve a query padrão
-        return Produto.objects.filter(ativo=True)
-```
-
----
-# ListView - Contexto Extra
-```python
-class ProdutoListView(ListView):
-    model = Produto
-    context_object_name = 'produtos'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['categorias'] = Categoria.objects.all()
-        context['titulo'] = 'Lista de Produtos'
-        return context
-```
-
----
-# DetailView
-- Exibe detalhes de um objeto;
-```python
-from django.views.generic import DetailView
-
-class ProdutoDetailView(DetailView):
-    model = Produto
-```
-- Busca objeto pelo `pk` ou `slug` da URL;
-- Renderiza `produto_detail.html`;
-- Passa objeto como `object` ou `produto`.
-
----
-# DetailView - URL
-```python
-urlpatterns = [
-    # Usando pk
-    path('produto/<int:pk>/', ProdutoDetailView.as_view(), name='produto_detalhe'),
-
-    # Usando slug
-    path('produto/<slug:slug>/', ProdutoDetailView.as_view(), name='produto_detalhe'),
-]
-```
-
----
-# DetailView - Template
-```django
-<!-- produtos/produto_detail.html -->
-<h1>{{ produto.nome }}</h1>
-
-<p>{{ produto.descricao }}</p>
-<p>Preço: R$ {{ produto.preco }}</p>
-<p>Categoria: {{ produto.categoria }}</p>
-
-<a href="{% url 'produto_editar' produto.pk %}">Editar</a>
-<a href="{% url 'produto_deletar' produto.pk %}">Deletar</a>
-```
-
----
-# DetailView - Customizando
-```python
-class ProdutoDetailView(DetailView):
-    model = Produto
-    template_name = 'produtos/detalhe.html'
-    context_object_name = 'produto'
-    slug_field = 'slug'        # campo do model
-    slug_url_kwarg = 'slug'    # nome na URL
-```
-
----
-# CreateView
-- Formulário para criar objetos;
-```python
-from django.views.generic import CreateView
-from django.urls import reverse_lazy
-
-class ProdutoCreateView(CreateView):
-    model = Produto
-    fields = ['nome', 'descricao', 'preco', 'categoria']
-    success_url = reverse_lazy('produto_lista')
-```
-- Gera formulário automaticamente;
-- Salva o objeto se válido;
-- Redireciona para `success_url`.
-
----
-# Por que reverse_lazy?
-- `reverse()` é executado na importação do módulo;
-- Nesse momento as URLs podem não estar carregadas;
-- `reverse_lazy()` só executa quando necessário;
-- **Sempre use `reverse_lazy` em atributos de classe**.
-
----
-# CreateView - Template
-```django
-<!-- produtos/produto_form.html -->
-<h1>Novo Produto</h1>
-
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Salvar</button>
-</form>
-
-<a href="{% url 'produto_lista' %}">Cancelar</a>
-```
-- Template padrão: `<model>_form.html`
-
----
-# CreateView - Customizando
-```python
-class ProdutoCreateView(CreateView):
-    model = Produto
-    fields = ['nome', 'descricao', 'preco', 'categoria']
-    template_name = 'produtos/criar.html'
-    success_url = reverse_lazy('produto_lista')
-
-    def form_valid(self, form):
-        form.instance.criado_por = self.request.user
-        return super().form_valid(form)
-```
-- `form_valid()` é chamado quando o form é válido.
-
----
-# UpdateView
-- Formulário para editar objetos;
-```python
-from django.views.generic import UpdateView
-
-class ProdutoUpdateView(UpdateView):
-    model = Produto
-    fields = ['nome', 'descricao', 'preco', 'categoria']
-    success_url = reverse_lazy('produto_lista')
-```
-- Carrega objeto existente no formulário;
-- Usa o mesmo template que CreateView (`produto_form.html`).
-
----
-# UpdateView - Template Compartilhado
-```django
-<!-- produtos/produto_form.html -->
-<h1>
-    {% if object %}
-        Editar {{ object.nome }}
-    {% else %}
-        Novo Produto
-    {% endif %}
-</h1>
-
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Salvar</button>
-</form>
-```
-
----
-# DeleteView
-- Confirmação e exclusão de objetos;
-```python
-from django.views.generic import DeleteView
-
-class ProdutoDeleteView(DeleteView):
-    model = Produto
-    success_url = reverse_lazy('produto_lista')
-```
-- GET: exibe página de confirmação;
-- POST: deleta o objeto;
-- Template padrão: `produto_confirm_delete.html`.
-
----
-# DeleteView - Template
-```django
-<!-- produtos/produto_confirm_delete.html -->
-<h1>Confirmar Exclusão</h1>
-
-<p>Tem certeza que deseja excluir "{{ object.nome }}"?</p>
-
-<form method="post">
-    {% csrf_token %}
-    <button type="submit">Sim, excluir</button>
-    <a href="{% url 'produto_lista' %}">Cancelar</a>
-</form>
-```
-
----
-# Redirecionamento Dinâmico
-```python
-class ProdutoUpdateView(UpdateView):
-    model = Produto
-    fields = ['nome', 'descricao', 'preco']
-
-    def get_success_url(self):
-        # Redireciona para o detalhe do objeto editado
-        return reverse('produto_detalhe', kwargs={'pk': self.object.pk})
-```
-- `get_success_url()` para URLs dinâmicas.
-
----
-# Usando Form Class
-```python
-from .forms import ProdutoForm
-
-class ProdutoCreateView(CreateView):
-    model = Produto
-    form_class = ProdutoForm  # ao invés de fields
-    success_url = reverse_lazy('produto_lista')
-```
-- Use `form_class` para forms personalizados;
-- Não pode usar `fields` junto com `form_class`.
-
----
-# Resumo - Templates Padrão
-| View | Template Padrão |
-|------|-----------------|
-| ListView | `<model>_list.html` |
-| DetailView | `<model>_detail.html` |
-| CreateView | `<model>_form.html` |
-| UpdateView | `<model>_form.html` |
-| DeleteView | `<model>_confirm_delete.html` |
-
----
-# Resumo - Variáveis de Contexto
-| View | Variável Padrão |
-|------|-----------------|
-| ListView | `object_list` |
-| DetailView | `object` |
-| CreateView | `form` |
-| UpdateView | `object`, `form` |
-| DeleteView | `object` |
-
----
-# CRUD Completo - Views
-```python
-# views.py
-from django.views.generic import (
-    ListView, DetailView, CreateView, UpdateView, DeleteView
+# PERIGOSO — nunca faça isso!
+Usuario.objects.extra(
+    where=[f"username = '{input_do_usuario}'"]
 )
-from django.urls import reverse_lazy
-from .models import Produto
 
-class ProdutoListView(ListView):
-    model = Produto
-    context_object_name = 'produtos'
-
-class ProdutoDetailView(DetailView):
-    model = Produto
-
-class ProdutoCreateView(CreateView):
-    model = Produto
-    fields = ['nome', 'descricao', 'preco', 'categoria', 'ativo']
-    success_url = reverse_lazy('produto_lista')
+# Se precisar SQL raw, use parâmetros:
+from django.db import connection
+cursor.execute(
+    "SELECT * FROM auth_user WHERE username = %s",
+    [input_do_usuario]  # ← lista de parâmetros, não f-string
+)
 ```
 
 ---
-# CRUD Completo - Views (cont.)
+# XSS — Cross-Site Scripting
+- Injeção de scripts maliciosos na página web;
+- O script executa no navegador das vítimas;
+- Pode roubar cookies de sessão, redirecionar usuários.
+
+```html
+<!-- Input do usuário: <script>alert('XSS')</script> -->
+
+<!-- Sem proteção: executa o script -->
+<p>{{ comentario }}</p>
+
+<!-- Django escapa por padrão: exibe o texto literal -->
+<p>&lt;script&gt;alert(&#x27;XSS&#x27;)&lt;/script&gt;</p>
+```
+
+---
+# XSS — Proteção no Django
+- Templates Django **escapam automaticamente** todas as variáveis;
+- Nunca desabilite o escape sem necessidade.
+
+```django
+{# Escapado automaticamente — SEGURO #}
+{{ usuario.comentario }}
+
+{# Desativa escape — use apenas com HTML confiável! #}
+{{ html_de_confianca|safe }}
+```
+
 ```python
-class ProdutoUpdateView(UpdateView):
-    model = Produto
-    fields = ['nome', 'descricao', 'preco', 'categoria', 'ativo']
-    success_url = reverse_lazy('produto_lista')
+# No Python, use mark_safe() apenas para HTML gerado pelo servidor
+from django.utils.safestring import mark_safe
 
-class ProdutoDeleteView(DeleteView):
-    model = Produto
-    success_url = reverse_lazy('produto_lista')
+# PERIGOSO: nunca faça com input do usuário
+html = mark_safe(f"<b>{request.POST['nome']}</b>")
+
+# SEGURO: use apenas com conteúdo gerado internamente
+html = mark_safe("<b>Texto fixo do servidor</b>")
 ```
 
 ---
-# CRUD Completo - URLs
+# CSRF — Cross-Site Request Forgery
+- Força o navegador do usuário a enviar requisições não autorizadas;
+- Ex.: link em outro site que faz POST para sua aplicação;
+- O navegador envia os cookies de sessão automaticamente!
+
+```
+1. Usuário está logado em banco.com
+2. Abre email malicioso com link para evil.com
+3. evil.com tem formulário oculto que faz POST para banco.com/transferir
+4. O navegador envia os cookies de sessão → transferência ocorre!
+```
+
+---
+# CSRF — Proteção no Django
+- Django usa um token único por sessão;
+- O servidor valida o token em todo POST/PUT/DELETE;
+- Já está habilitado por padrão via `CsrfViewMiddleware`.
+
+```django
+{# Obrigatório em todo formulário POST! #}
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Enviar</button>
+</form>
+```
+
+```python
+# AJAX: envie o token no header
+headers: {'X-CSRFToken': getCookie('csrftoken')}
+```
+
+---
+# Logs no Django
+- Registro de eventos do sistema: erros, acessos, tentativas de login;
+- Fundamental para auditoria e diagnóstico de incidentes;
+- Django usa o módulo `logging` do Python.
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+def minha_view(request):
+    logger.debug('Processando requisição')
+    logger.info('Usuário %s acessou a página', request.user)
+    logger.warning('Tentativa de acesso não autorizado')
+    logger.error('Erro ao processar pagamento: %s', str(e))
+    logger.critical('Banco de dados indisponível!')
+```
+
+---
+# Configurando Logging — `settings.py`
+```python
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'arquivo': {
+            'class': 'logging.FileHandler',
+            'filename': 'django.log',
+        },
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['arquivo', 'console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {'level': 'ERROR'},
+        'minha_app': {'level': 'DEBUG'},
+    },
+}
+```
+
+---
+# Captcha
+- Diferencia humanos de bots automatizados;
+- Protege formulários de cadastro, login e contato;
+- Opções: `django-simple-captcha`, hCaptcha, Google reCAPTCHA.
+
+```bash
+pip install django-simple-captcha
+```
+```python
+# settings.py
+INSTALLED_APPS = [..., 'captcha']
+
+# forms.py
+from captcha.fields import CaptchaField
+
+class ContatoForm(forms.Form):
+    nome = forms.CharField()
+    mensagem = forms.CharField(widget=forms.Textarea)
+    captcha = CaptchaField()  # campo obrigatório anti-bot
+```
+
+---
+# Captcha — Rota e Template
 ```python
 # urls.py
-from django.urls import path
-from . import views
-
 urlpatterns = [
-    path('', views.ProdutoListView.as_view(), name='produto_lista'),
-    path('<int:pk>/', views.ProdutoDetailView.as_view(), name='produto_detalhe'),
-    path('novo/', views.ProdutoCreateView.as_view(), name='produto_criar'),
-    path('<int:pk>/editar/', views.ProdutoUpdateView.as_view(), name='produto_editar'),
-    path('<int:pk>/deletar/', views.ProdutoDeleteView.as_view(), name='produto_deletar'),
+    path('captcha/', include('captcha.urls')),
+    ...
+]
+```
+```django
+{# template: gera imagem + campo de texto #}
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Enviar</button>
+</form>
+```
+```bash
+# Migração necessária
+python manage.py migrate
+```
+
+---
+# Compressão de Assets
+- Reduz o tamanho dos arquivos CSS/JS enviados ao navegador;
+- Melhora performance e dificulta leitura do código-fonte;
+- `django-compressor` agrupa e minifica arquivos estáticos.
+
+```bash
+pip install django-compressor
+```
+```python
+# settings.py
+INSTALLED_APPS = [..., 'compressor']
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    'compressor.finders.CompressorFinder',
 ]
 ```
 
 ---
-# CRUD - Lista (produto_list.html)
+# Compressor — Template
 ```django
-<h1>Produtos</h1>
-<a href="{% url 'produto_criar' %}">Novo Produto</a>
+{% load compress %}
 
-<table>
-    <tr><th>Nome</th><th>Preço</th><th>Ações</th></tr>
-    {% for produto in produtos %}
-    <tr>
-        <td><a href="{% url 'produto_detalhe' produto.pk %}">{{ produto.nome }}</a></td>
-        <td>R$ {{ produto.preco }}</td>
-        <td>
-            <a href="{% url 'produto_editar' produto.pk %}">Editar</a>
-            <a href="{% url 'produto_deletar' produto.pk %}">Deletar</a>
-        </td>
-    </tr>
-    {% endfor %}
-</table>
+{% compress css %}
+<link href="{% static 'css/base.css' %}" rel="stylesheet">
+<link href="{% static 'css/forms.css' %}" rel="stylesheet">
+{% endcompress %}
+
+{% compress js %}
+<script src="{% static 'js/app.js' %}"></script>
+<script src="{% static 'js/utils.js' %}"></script>
+{% endcompress %}
 ```
+- Em produção, gera um único arquivo minificado para cada bloco.
 
 ---
-# CRUD - Detalhe (produto_detail.html)
-```django
-<h1>{{ produto.nome }}</h1>
-
-<p><strong>Descrição:</strong> {{ produto.descricao }}</p>
-<p><strong>Preço:</strong> R$ {{ produto.preco }}</p>
-<p><strong>Categoria:</strong> {{ produto.categoria }}</p>
-<p><strong>Status:</strong> {% if produto.ativo %}Ativo{% else %}Inativo{% endif %}</p>
-
-<a href="{% url 'produto_editar' produto.pk %}">Editar</a>
-<a href="{% url 'produto_deletar' produto.pk %}">Deletar</a>
-<a href="{% url 'produto_lista' %}">Voltar</a>
-```
-
----
-# CRUD - Form (produto_form.html)
-```django
-<h1>{% if object %}Editar{% else %}Novo{% endif %} Produto</h1>
-
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Salvar</button>
-    <a href="{% url 'produto_lista' %}">Cancelar</a>
-</form>
-```
-
----
-# CRUD - Delete (produto_confirm_delete.html)
-```django
-<h1>Excluir Produto</h1>
-
-<p>Tem certeza que deseja excluir <strong>{{ object.nome }}</strong>?</p>
-<p>Esta ação não pode ser desfeita.</p>
-
-<form method="post">
-    {% csrf_token %}
-    <button type="submit">Sim, excluir</button>
-    <a href="{% url 'produto_lista' %}">Cancelar</a>
-</form>
-```
-
----
-# Mixins
-- Classes que adicionam funcionalidades específicas;
-- Não funcionam sozinhas, devem ser combinadas com outras classes;
-- Permitem compor comportamentos de forma modular;
-- Django oferece vários mixins prontos;
-- Conceito importante de POO: herança múltipla controlada.
-
----
-# Como Mixins Funcionam
+# `DEBUG=False` — Configuração de Produção
 ```python
-# Mixin adiciona uma funcionalidade
-class TituloMixin:
-    titulo = 'Página'
+# settings.py em produção
+DEBUG = False  # NUNCA True em produção!
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['titulo'] = self.titulo
-        return context
+# Lista de domínios permitidos
+ALLOWED_HOSTS = ['meusite.com', 'www.meusite.com']
 
-# Combinamos mixin + view genérica
-class ProdutoListView(TituloMixin, ListView):
-    model = Produto
-    titulo = 'Lista de Produtos'
+# Arquivos estáticos (servidor web serve diretamente)
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+python manage.py collectstatic
 ```
-- Mixins vêm **antes** da view na herança!
+- Com `DEBUG=True` em produção: stacktraces visíveis para atacantes;
+- Com `DEBUG=True`: Django serve estáticos mas **não** é adequado para produção.
 
 ---
-# Ordem dos Mixins
+# `SECRET_KEY` e Variáveis de Ambiente
+- `SECRET_KEY` é usada para assinar cookies de sessão e tokens CSRF;
+- Nunca versione a `SECRET_KEY` no git!
+- Use variáveis de ambiente ou arquivos `.env`.
+
 ```python
-# CORRETO: Mixins primeiro, View por último
-class MinhaView(MixinA, MixinB, ListView):
-    ...
+# .env (nunca commitar!)
+SECRET_KEY=sua-chave-super-secreta-aqui
+DATABASE_URL=postgres://user:pass@host/db
 
-# ERRADO: View não deve vir primeiro
-class MinhaView(ListView, MixinA):  # Pode não funcionar!
-    ...
-```
-- Python resolve métodos da esquerda para direita (MRO);
-- A view genérica deve ser a última classe base.
+# settings.py
+import os
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
----
-# Autenticação em CBV
-- Proteger views para usuários logados;
-- Em FBV usamos o decorator `@login_required`;
-- Em CBV usamos o mixin `LoginRequiredMixin`.
-
----
-# LoginRequiredMixin
-```python
-from django.contrib.auth.mixins import LoginRequiredMixin
-
-class ProdutoCreateView(LoginRequiredMixin, CreateView):
-    model = Produto
-    fields = ['nome', 'preco']
-    success_url = reverse_lazy('produto_lista')
-```
-- Redireciona para login se não autenticado;
-- Mixin deve vir **antes** da view genérica.
-
----
-# Configurando LoginRequiredMixin
-```python
-class ProdutoCreateView(LoginRequiredMixin, CreateView):
-    model = Produto
-    fields = ['nome', 'preco']
-
-    # URL de login (ou configure LOGIN_URL no settings.py)
-    login_url = '/login/'
-
-    # Redireciona de volta após login
-    redirect_field_name = 'next'
+# Ou com python-decouple
+from decouple import config
+SECRET_KEY = config('SECRET_KEY')
 ```
 
 ---
-# PermissionRequiredMixin
-- Verifica se o usuário tem permissões específicas;
-```python
-from django.contrib.auth.mixins import PermissionRequiredMixin
-
-class ProdutoCreateView(PermissionRequiredMixin, CreateView):
-    model = Produto
-    fields = ['nome', 'preco']
-    permission_required = 'app.add_produto'
-
-    # Múltiplas permissões
-    # permission_required = ['app.add_produto', 'app.change_produto']
+# `.gitignore` e Segredos
+```gitignore
+# .gitignore — impede commit de arquivos sensíveis
+.env
+*.env
+local_settings.py
+db.sqlite3
 ```
-- Permissões são criadas automaticamente pelo Django para cada model.
+```bash
+# Verificar se um segredo foi commitado
+git log --all --full-history -- .env
 
----
-# Permissões Padrão do Django
-- Para cada model, Django cria 4 permissões:
-    - `app.add_<model>` - criar
-    - `app.change_<model>` - editar
-    - `app.delete_<model>` - deletar
-    - `app.view_<model>` - visualizar
-- Ex: `produtos.add_produto`, `produtos.change_produto`
-
----
-# UserPassesTestMixin
-- Teste customizado para autorização;
-```python
-from django.contrib.auth.mixins import UserPassesTestMixin
-
-class ProdutoUpdateView(UserPassesTestMixin, UpdateView):
-    model = Produto
-    fields = ['nome', 'preco']
-
-    def test_func(self):
-        # Só o dono pode editar
-        produto = self.get_object()
-        return self.request.user == produto.criado_por
+# Se commitado por acidente: revogar e gerar nova chave!
+# Histórico do git é público — o segredo está comprometido.
 ```
-- Retorna True para permitir, False para negar.
 
 ---
-# Combinando Mixins
-```python
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-
-class ProdutoDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
-    model = Produto
-    success_url = reverse_lazy('produto_lista')
-    permission_required = 'produtos.delete_produto'
+# Checklist de Segurança Django
+```bash
+# Django tem um checklist embutido
+python manage.py check --deploy
 ```
-- Primeiro verifica login, depois permissão;
-- Ordem dos mixins importa!
+Verifica automaticamente:
+- `DEBUG=False`
+- `SECRET_KEY` segura
+- `ALLOWED_HOSTS` configurado
+- `SECURE_SSL_REDIRECT`
+- Cookies com `Secure` e `HttpOnly`
+- `X-Frame-Options`
+- `Content-Security-Policy`
 
 ---
-<style scoped>pre { font-size: 20px; }</style>
-# CRUD Protegido - Exemplo
+# Cabeçalhos de Segurança
 ```python
-from django.contrib.auth.mixins import LoginRequiredMixin
+# settings.py
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'  # impede clickjacking
 
-class ProdutoListView(ListView):  # Público
-    model = Produto
-
-class ProdutoDetailView(DetailView):  # Público
-    model = Produto
-
-class ProdutoCreateView(LoginRequiredMixin, CreateView):
-    model = Produto
-    fields = ['nome', 'preco']
-    success_url = reverse_lazy('produto_lista')
-
-class ProdutoUpdateView(LoginRequiredMixin, UpdateView):
-    model = Produto
-    fields = ['nome', 'preco']
-    success_url = reverse_lazy('produto_lista')
-
-class ProdutoDeleteView(LoginRequiredMixin, DeleteView):
-    model = Produto
-    success_url = reverse_lazy('produto_lista')
+# Apenas com HTTPS:
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_HSTS_SECONDS = 31536000  # força HTTPS por 1 ano
 ```
 
 ---
 # Referências
-- https://docs.djangoproject.com/en/5.1/topics/class-based-views/
-- https://docs.djangoproject.com/en/5.1/ref/class-based-views/
-- https://ccbv.co.uk/ (referência visual das CBVs)
+- https://owasp.org/www-project-top-ten/
+- https://docs.djangoproject.com/en/5.1/topics/security/
+- https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
+- https://django-simple-captcha.readthedocs.io/
+- https://django-compressor.readthedocs.io/
+- https://docs.python.org/3/howto/logging.html
 
 ---
 # <!--fit--> Dúvidas? 🤔

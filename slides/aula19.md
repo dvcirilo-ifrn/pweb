@@ -4,7 +4,7 @@ size: 4:3
 marp: true
 paginate: true
 _paginate: false
-title: Aula 19: Customizando o Django Admin
+title: Aula 19: RichText/Formsets
 author: Diego Cirilo
 
 ---
@@ -19,424 +19,612 @@ img {
 
 ### Prof. Diego Cirilo
 
-**Aula 19**: Customizando o Django Admin
+**Aula 19**: Formsets
 
 ---
-# Django Admin
-- Interface administrativa gerada automaticamente;
-- Permite CRUD completo dos models;
-- Útil para gerenciamento interno;
-- Altamente customizável através do `ModelAdmin`.
+# Formsets
+- Conjuntos (sets) de forms;
+- Permite exibir e salvar mais de uma cópia de um form em uma mesma página;
+- Ex. adicionar várias tarefas de uma só vez;
+- Faz muito sentido quando utilizado com JS/AJAX.
 
 ---
-# Registro Básico
+# Exemplo
+- Considerando um model Tarefa e um ModelForm TarefaForm (feitos normalmente)
+- No forms.py
 ```python
-from django.contrib import admin
-from .models import Produto
+from django import forms
+from django.forms import formset_factory
+from .models import Tarefa
 
-# Registro simples
-admin.site.register(Produto)
-```
-- Usa configurações padrão;
-- Exibe apenas o `__str__` do objeto na listagem.
+class TarefaForm(forms.ModelForm):
+    class Meta:
+        model = Tarefa
+        fields = "__all__"
 
----
-# ModelAdmin
-- Classe que define como o model aparece no Admin;
-- Permite customizar listagem, formulários, filtros, etc.
-```python
-from django.contrib import admin
-from .models import Produto
 
-class ProdutoAdmin(admin.ModelAdmin):
-    pass  # configurações padrão
-
-admin.site.register(Produto, ProdutoAdmin)
+TarefaFormSet = formset_factory(TarefaForm, extra=2)  # 2 forms por padrão
 ```
 
 ---
-# Decorator @admin.register
-- Forma alternativa e mais limpa de registrar:
+# Exemplo
+- No views.py:
 ```python
-from django.contrib import admin
-from .models import Produto
+from django.shortcuts import render, redirect
+from .forms import TarefaFormSet
 
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco', 'estoque']
-```
-- Equivalente ao `admin.site.register(Produto, ProdutoAdmin)`
+def criar_tarefas(request):
+    if request.method == 'POST':
+        formset = TarefaFormSet(request.POST)
+        if formset.is_valid():
+            for form in formset:       # Fazemos o for pois são vários forms
+                if form.cleaned_data:  
+                    task = form.save()  
+            return redirect('success_url')  
+    else:
+        formset = TarefaFormSet()  # Cria o formset vazio
 
----
-# list_display
-- Define as colunas exibidas na listagem;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco', 'estoque', 'ativo']
-```
-- Aceita campos do model e métodos;
-- Torna a listagem mais informativa.
-
----
-# list_display com Métodos
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco', 'estoque_formatado']
-
-    def estoque_formatado(self, obj):
-        if obj.estoque > 10:
-            return f"✅ {obj.estoque} unidades"
-        return f"⚠️ {obj.estoque} unidades"
-
-    estoque_formatado.short_description = "Estoque"
+    context = {
+        'formset': formset
+    }
+    return render(request, 'criar_tarefas.html', context)
 ```
 
 ---
-# list_filter
-- Adiciona filtros na barra lateral;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'categoria', 'preco', 'ativo']
-    list_filter = ['categoria', 'ativo', 'data_criacao']
-```
-- Útil para filtrar por categoria, status, data, etc.
-
----
-# search_fields
-- Adiciona caixa de busca;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'categoria', 'preco']
-    search_fields = ['nome', 'descricao', 'categoria__nome']
-```
-- Busca em múltiplos campos;
-- Use `__` para campos de relacionamentos.
-
----
-# ordering
-- Define ordenação padrão da listagem;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco', 'data_criacao']
-    ordering = ['-data_criacao']  # mais recentes primeiro
-```
-- Use `-` para ordem decrescente.
-
----
-# list_editable
-- Permite editar campos direto na listagem;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco', 'estoque', 'ativo']
-    list_editable = ['preco', 'estoque', 'ativo']
-```
-- O campo deve estar em `list_display`;
-- O primeiro campo de `list_display` não pode ser editável.
-
----
-# date_hierarchy
-- Adiciona navegação por data no topo;
-```python
-@admin.register(Pedido)
-class PedidoAdmin(admin.ModelAdmin):
-    list_display = ['id', 'cliente', 'total', 'data']
-    date_hierarchy = 'data'
-```
-- Permite navegar por ano/mês/dia.
-
----
-# list_per_page
-- Define quantos itens por página;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco']
-    list_per_page = 25  # padrão é 100
+# Exemplo
+- No template:
+```django
+...
+<form method="post">
+    {% csrf_token %}
+    {{ formset.management_form }}  <!-- Necessário para formsets -->
+    
+    <!-- Carrega os forms um por um -->
+    {% for form in formset %}
+        <div class="form">
+            {{ form }}
+        </div>
+        <hr>
+    {% endfor %}
+    
+    <button type="submit">Save</button>
+</form>
+...
 ```
 
 ---
-# Exemplo Completo - Listagem
+# Editar Formsets
+- Caso seja necessário carregar dados no formulário, como em uma view de editar:
+- No views.py
 ```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'categoria', 'preco', 'estoque', 'ativo']
-    list_filter = ['categoria', 'ativo']
-    search_fields = ['nome', 'descricao']
-    ordering = ['nome']
-    list_editable = ['preco', 'ativo']
-    list_per_page = 20
-    date_hierarchy = 'data_criacao'
+from .models import Tarefa
+from .forms import TarefaFormSet
+
+def editar_tarefas(request):
+    if request.method == 'POST':
+        formset = TaskFormSet(request.POST)
+        if formset.is_valid():
+            for form in formset:
+                if form.cleaned_data:
+                    form.save()
+            return redirect('success_url')
+    else:
+        tarefas = Tarefas.objects.all()
+        initial_data = [{'title': task.title, 'description': task.description, 'completed': task.completed} for task in tasks]
+        lista_tarefas = []
+        for tarefa in tarefas:
+            lista_tarefas.append(tarefa)
+        formset = TarefasFormSet(initial=lista_tarefas)
+
+    context = {
+        'formset': formset,
+    }
+
+    return render(request, 'editar_tarefas.html', context)
 ```
 
 ---
-# Customizando o Formulário
-- Por padrão, o Admin exibe todos os campos editáveis;
-- Podemos customizar quais campos aparecem e como.
+# Management Form
+- O `management_form` é essencial para o funcionamento do formset;
+- Contém campos ocultos que controlam o formset:
+    - `TOTAL_FORMS` - número total de forms
+    - `INITIAL_FORMS` - forms com dados iniciais
+    - `MIN_NUM_FORMS` - mínimo de forms
+    - `MAX_NUM_FORMS` - máximo de forms
+- Sem ele, o Django não consegue processar o formset!
 
 ---
-# fields
-- Define quais campos aparecem e em qual ordem;
+# Parâmetros do formset_factory
 ```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    fields = ['nome', 'categoria', 'preco', 'descricao']
-```
-- Campos não listados não aparecem no formulário.
-
----
-# exclude
-- Exclui campos específicos;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    exclude = ['slug', 'data_atualizacao']
-```
-- Todos os outros campos aparecem.
-
----
-# readonly_fields
-- Campos exibidos mas não editáveis;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    readonly_fields = ['data_criacao', 'data_atualizacao', 'slug']
-```
-- Útil para campos automáticos.
-
----
-# fieldsets
-- Agrupa campos em seções;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    fieldsets = [
-        ('Informações Básicas', {
-            'fields': ['nome', 'categoria', 'descricao']
-        }),
-        ('Preço e Estoque', {
-            'fields': ['preco', 'estoque']
-        }),
-        ('Configurações', {
-            'fields': ['ativo', 'destaque'],
-            'classes': ['collapse']  # seção recolhível
-        }),
-    ]
+TarefaFormSet = formset_factory(
+    TarefaForm,
+    extra=2,           # forms extras vazios
+    max_num=10,        # máximo de forms
+    min_num=1,         # mínimo de forms
+    validate_min=True, # valida mínimo
+    validate_max=True, # valida máximo
+    can_delete=True,   # permite marcar para deletar
+    can_order=True,    # permite ordenar
+)
 ```
 
 ---
-# fieldsets - Opções
+# ModelFormSet
+- Quando trabalhamos diretamente com Models;
+- Usa `modelformset_factory` ao invés de `formset_factory`;
+- Simplifica o código pois já faz o CRUD automaticamente.
 ```python
-fieldsets = [
-    ('Seção', {
-        'fields': ['campo1', 'campo2'],
-        'classes': ['collapse'],  # recolhível
-        'description': 'Texto explicativo'
-    }),
-    ('Campos na mesma linha', {
-        'fields': [('campo1', 'campo2')]  # tuple = mesma linha
-    }),
+from django.forms import modelformset_factory
+from .models import Tarefa
+
+TarefaFormSet = modelformset_factory(
+    Tarefa,
+    fields=['titulo', 'descricao', 'concluida'],
+    extra=2
+)
+```
+
+---
+# ModelFormSet na View
+```python
+def gerenciar_tarefas(request):
+    if request.method == 'POST':
+        formset = TarefaFormSet(request.POST)
+        if formset.is_valid():
+            formset.save()  # salva todos de uma vez!
+            return redirect('lista_tarefas')
+    else:
+        formset = TarefaFormSet(queryset=Tarefa.objects.all())
+
+    return render(request, 'gerenciar_tarefas.html', {'formset': formset})
+```
+- O `queryset` define quais objetos serão carregados para edição.
+
+---
+# Inline FormSets
+- Para relações entre models (ForeignKey);
+- Ex: Pedido com vários Itens;
+- Usa `inlineformset_factory`;
+```python
+from django.forms import inlineformset_factory
+from .models import Pedido, ItemPedido
+
+ItemFormSet = inlineformset_factory(
+    Pedido,           # model pai
+    ItemPedido,       # model filho
+    fields=['produto', 'quantidade', 'preco'],
+    extra=3,
+    can_delete=True
+)
+```
+
+---
+# Inline FormSets - Models
+```python
+# models.py
+class Pedido(models.Model):
+    cliente = models.CharField(max_length=100)
+    data = models.DateField(auto_now_add=True)
+
+class ItemPedido(models.Model):
+    pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE)
+    produto = models.CharField(max_length=100)
+    quantidade = models.IntegerField()
+    preco = models.DecimalField(max_digits=10, decimal_places=2)
+```
+
+---
+<style scoped>pre { font-size: 16px; }</style>
+# Inline FormSets - View
+```python
+def criar_pedido(request):
+    if request.method == 'POST':
+        form = PedidoForm(request.POST)
+        formset = ItemFormSet(request.POST)
+        if form.is_valid() and formset.is_valid():
+            pedido = form.save()
+            formset.instance = pedido  # associa os itens ao pedido
+            formset.save()
+            return redirect('lista_pedidos')
+    else:
+        form = PedidoForm()
+        formset = ItemFormSet()
+
+    return render(request, 'criar_pedido.html', {
+        'form': form,
+        'formset': formset
+    })
+```
+
+---
+# Inline FormSets - Template
+```django
+<form method="post">
+    {% csrf_token %}
+
+    <h2>Dados do Pedido</h2>
+    {{ form.as_p }}
+
+    <h2>Itens do Pedido</h2>
+    {{ formset.management_form }}
+    {% for item_form in formset %}
+        <div class="item">
+            {{ item_form.as_p }}
+        </div>
+    {% endfor %}
+
+    <button type="submit">Salvar Pedido</button>
+</form>
+```
+
+---
+<style scoped>pre { font-size: 16px; }</style>
+# Editando com Inline FormSets
+```python
+def editar_pedido(request, pk):
+    pedido = get_object_or_404(Pedido, pk=pk)
+
+    if request.method == 'POST':
+        form = PedidoForm(request.POST, instance=pedido)
+        formset = ItemFormSet(request.POST, instance=pedido)
+        if form.is_valid() and formset.is_valid():
+            form.save()
+            formset.save()
+            return redirect('lista_pedidos')
+    else:
+        form = PedidoForm(instance=pedido)
+        formset = ItemFormSet(instance=pedido)  # carrega itens existentes
+
+    return render(request, 'editar_pedido.html', {
+        'form': form,
+        'formset': formset
+    })
+```
+
+---
+# Deletando Itens
+- Com `can_delete=True`, cada form tem um checkbox DELETE;
+- Ao salvar, os marcados são removidos automaticamente;
+```django
+{% for item_form in formset %}
+    <div class="item">
+        {{ item_form.as_p }}
+        {% if item_form.instance.pk %}
+            {{ item_form.DELETE }} Remover
+        {% endif %}
+    </div>
+{% endfor %}
+```
+
+---
+# Validação de Formsets
+- Podemos criar validações personalizadas;
+- Sobrescrevemos o método `clean` do BaseFormSet:
+```python
+from django.forms import BaseFormSet
+
+class BaseItemFormSet(BaseFormSet):
+    def clean(self):
+        super().clean()
+        if any(self.errors):
+            return
+
+        # verifica se há pelo menos um item
+        forms_preenchidos = [f for f in self.forms if f.cleaned_data]
+        if len(forms_preenchidos) < 1:
+            raise forms.ValidationError("Adicione pelo menos um item.")
+```
+
+---
+# Usando Validação Personalizada
+```python
+TarefaFormSet = formset_factory(
+    TarefaForm,
+    formset=BaseItemFormSet,  # usa a classe personalizada
+    extra=2
+)
+```
+
+---
+# Formsets com Crispy Forms
+- Podemos usar o Crispy Forms com formsets;
+```django
+{% load crispy_forms_tags %}
+
+<form method="post">
+    {% csrf_token %}
+    {{ formset.management_form }}
+
+    {% for form in formset %}
+        <div class="card mb-3">
+            <div class="card-body">
+                {{ form|crispy }}
+            </div>
+        </div>
+    {% endfor %}
+
+    <button type="submit" class="btn btn-primary">Salvar</button>
+</form>
+```
+
+---
+# Adicionando Forms com JavaScript
+- Podemos adicionar novos forms dinamicamente;
+- Precisamos atualizar o `TOTAL_FORMS` do management form;
+- O Django espera que os campos sigam o padrão `form-N-campo`.
+
+---
+<style scoped>pre { font-size: 14px; }</style>
+# Exemplo - Template
+```django
+<form method="post" id="formset">
+    {% csrf_token %}
+    {{ formset.management_form }}
+
+    <div id="forms-container">
+        {% for form in formset %}
+            <div class="form-item">
+                {{ form.as_p }}
+            </div>
+        {% endfor %}
+    </div>
+
+    <button type="button" id="add-form">Adicionar</button>
+    <button type="submit">Salvar</button>
+</form>
+
+<!-- Template vazio para clonar -->
+<div id="empty-form" style="display:none;">
+    {{ formset.empty_form.as_p }}
+</div>
+```
+
+---
+<style scoped>pre { font-size: 15px; }</style>
+# Exemplo - JavaScript
+```javascript
+document.querySelector("#add-form").addEventListener("click", function() {
+    const container = document.querySelector("#forms-container");
+    const totalForms = document.querySelector("#id_form-TOTAL_FORMS");
+    const formNum = parseInt(totalForms.value);
+
+    // Clona o template vazio
+    const emptyForm = document.querySelector("#empty-form").innerHTML;
+
+    // Substitui __prefix__ pelo número do form
+    const newForm = emptyForm.replace(/__prefix__/g, formNum);
+
+    // Adiciona o novo form
+    container.insertAdjacentHTML("beforeend",
+        `<div class="form-item">${newForm}</div>`
+    );
+
+    // Atualiza o contador
+    totalForms.value = formNum + 1;
+});
+```
+
+---
+# Removendo Forms com JavaScript
+```javascript
+function removerForm(button) {
+    const formItem = button.closest(".form-item");
+    const deleteInput = formItem.querySelector("input[name$='-DELETE']");
+
+    if (deleteInput) {
+        // Se já existe no banco, marca para deletar
+        deleteInput.checked = true;
+        formItem.style.display = "none";
+    } else {
+        // Se é novo, apenas remove do DOM
+        formItem.remove();
+        // Atualiza TOTAL_FORMS
+        const totalForms = document.querySelector("#id_form-TOTAL_FORMS");
+        totalForms.value = parseInt(totalForms.value) - 1;
+    }
+}
+```
+
+---
+# Quando usar FormSets?
+- Cadastro em lote (várias tarefas, produtos, etc.);
+- Relações um-para-muitos (pedido com itens);
+- Formulários dinâmicos (adicionar/remover campos);
+- Edição em massa de registros.
+
+---
+# Rich Text no Django
+- Campos de texto com formatação (negrito, itálico, listas, etc.);
+- Útil para blogs, descrições de produtos, conteúdo editorial;
+- O Django não tem suporte nativo a Rich Text;
+- Precisamos usar bibliotecas de terceiros.
+
+---
+# O que é um Editor Rich Text?
+- Editor WYSIWYG (*What You See Is What You Get*);
+- Interface visual para formatar texto;
+- Gera HTML que é salvo no banco de dados;
+- Exemplos: TinyMCE, CKEditor, Quill, Summernote.
+
+---
+# django-tinymce
+- Integra o editor TinyMCE ao Django;
+- Fácil de configurar;
+- Funciona bem com o Django Admin;
+- Instalação:
+```bash
+pip install django-tinymce
+```
+
+---
+# Configuração - settings.py
+```python
+INSTALLED_APPS = [
+    ...
+    'tinymce',
+    ...
+]
+
+TINYMCE_DEFAULT_CONFIG = {
+    'height': 360,
+    'width': '100%',
+    'menubar': False,
+    'plugins': 'lists link image code table',
+    'toolbar': 'undo redo | formatselect | bold italic | '
+               'alignleft aligncenter alignright | '
+               'bullist numlist | link image | code',
+}
+```
+
+---
+# Configuração - urls.py
+```python
+from django.urls import path, include
+
+urlpatterns = [
+    ...
+    path('tinymce/', include('tinymce.urls')),
+    ...
 ]
 ```
 
 ---
-# Inlines
-- Edita objetos relacionados na mesma página;
-- Útil para relações ForeignKey;
-- Ex: editar itens do pedido na página do pedido.
+# Usando no Model
+```python
+from django.db import models
+from tinymce.models import HTMLField
+
+class Artigo(models.Model):
+    titulo = models.CharField(max_length=200)
+    # Campo Rich Text
+    conteudo = HTMLField()
+    data_publicacao = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.titulo
+```
+- `HTMLField` substitui o `TextField` comum.
 
 ---
-# Tipos de Inline
+# Usando no Form
+- Se preferir usar em um Form ao invés do Model:
 ```python
-from django.contrib import admin
-from .models import Pedido, ItemPedido
+from django import forms
+from tinymce.widgets import TinyMCE
 
-# Exibe como tabela
-class ItemInline(admin.TabularInline):
-    model = ItemPedido
-    extra = 1  # linhas vazias extras
+class ArtigoForm(forms.ModelForm):
+    conteudo = forms.CharField(widget=TinyMCE())
 
-# Exibe como formulários empilhados
-class ItemStackedInline(admin.StackedInline):
-    model = ItemPedido
-    extra = 1
+    class Meta:
+        model = Artigo
+        fields = ['titulo', 'conteudo']
 ```
 
 ---
-# Usando Inlines
-```python
-class ItemInline(admin.TabularInline):
-    model = ItemPedido
-    extra = 1
-    fields = ['produto', 'quantidade', 'preco']
+# No Django Admin
+- O `HTMLField` já funciona automaticamente no Admin;
+- Não precisa de configuração extra;
+- O editor aparece no lugar do textarea padrão.
 
-@admin.register(Pedido)
-class PedidoAdmin(admin.ModelAdmin):
-    list_display = ['id', 'cliente', 'data', 'total']
-    inlines = [ItemInline]
+---
+# No Template - Formulário
+```django
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Salvar</button>
+</form>
+
+<!-- Necessário para carregar o TinyMCE -->
+{{ form.media }}
+```
+- O `{{ form.media }}` carrega os scripts necessários.
+
+---
+# Exibindo o Conteúdo
+- O conteúdo salvo é HTML;
+- Use o filtro `safe` para renderizar:
+```django
+<article>
+    <h1>{{ artigo.titulo }}</h1>
+    <div class="conteudo">
+        {{ artigo.conteudo|safe }}
+    </div>
+</article>
+```
+- **Cuidado**: só use `safe` com conteúdo confiável (de admins/editores).
+
+---
+# Segurança - XSS
+- Rich Text pode ser vetor de ataques XSS;
+- *Cross Site Scripting*;
+- O usuário pode inserir scripts maliciosos;
+- Soluções:
+    - Limitar quem pode usar o editor (apenas admins);
+    - Usar biblioteca de sanitização como `bleach`;
+    - Configurar o TinyMCE para limitar tags permitidas.
+
+---
+# Sanitizando com Bleach
+```bash
+pip install bleach
+```
+```python
+import bleach
+
+ALLOWED_TAGS = ['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'a', 'img']
+ALLOWED_ATTRS = {'a': ['href'], 'img': ['src', 'alt']}
+
+class Artigo(models.Model):
+    conteudo = HTMLField()
+
+    def save(self, *args, **kwargs):
+        self.conteudo = bleach.clean(
+            self.conteudo,
+            tags=ALLOWED_TAGS,
+            attributes=ALLOWED_ATTRS
+        )
+        super().save(*args, **kwargs)
 ```
 
 ---
-# Inline - Opções
+# Configurações Úteis do TinyMCE
 ```python
-class ItemInline(admin.TabularInline):
-    model = ItemPedido
-    extra = 1              # linhas extras vazias
-    min_num = 1            # mínimo de itens
-    max_num = 10           # máximo de itens
-    can_delete = True      # permitir deletar
-    show_change_link = True  # link para editar item
-    readonly_fields = ['subtotal']
+TINYMCE_DEFAULT_CONFIG = {
+    'height': 400,
+    'plugins': 'lists link image table code wordcount',
+    'toolbar': 'undo redo | styles | bold italic | '
+               'alignleft aligncenter alignright | '
+               'bullist numlist outdent indent | link image table | code',
+    'content_css': '/static/css/editor.css',  # CSS personalizado
+    'valid_elements': 'p,br,strong,em,ul,ol,li,a[href],img[src|alt]',
+    'language': 'pt_BR',
+}
 ```
 
 ---
-# Actions (Ações em Lote)
-- Ações aplicadas a múltiplos objetos selecionados;
-- Por padrão: apenas "Deletar selecionados".
-
----
-# Criando Actions
+# Upload de Imagens
+- Por padrão, TinyMCE não faz upload de imagens;
+- Opções:
+    - Usar URLs externas;
+    - Configurar endpoint de upload próprio;
+    - Usar `django-filebrowser` ou similar;
+- Configuração básica (apenas URLs):
 ```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'preco', 'ativo']
-    actions = ['ativar_produtos', 'desativar_produtos']
-
-    @admin.action(description="Ativar produtos selecionados")
-    def ativar_produtos(self, request, queryset):
-        queryset.update(ativo=True)
-
-    @admin.action(description="Desativar produtos selecionados")
-    def desativar_produtos(self, request, queryset):
-        queryset.update(ativo=False)
-```
-
----
-# Actions com Feedback
-```python
-@admin.action(description="Ativar produtos selecionados")
-def ativar_produtos(self, request, queryset):
-    count = queryset.update(ativo=True)
-    self.message_user(
-        request,
-        f"{count} produto(s) ativado(s) com sucesso."
-    )
-```
-
----
-# Customizando o Cabeçalho
-```python
-# admin.py ou urls.py
-admin.site.site_header = "Minha Loja - Administração"
-admin.site.site_title = "Admin Minha Loja"
-admin.site.index_title = "Painel de Controle"
-```
-- `site_header`: texto no topo da página
-- `site_title`: título da aba do navegador
-- `index_title`: título da página inicial
-
----
-# prepopulated_fields
-- Preenche campos automaticamente baseado em outros;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    prepopulated_fields = {'slug': ('nome',)}
-```
-- Muito usado para gerar slugs automaticamente.
-
----
-# autocomplete_fields
-- Busca com autocomplete para ForeignKey;
-```python
-@admin.register(Categoria)
-class CategoriaAdmin(admin.ModelAdmin):
-    search_fields = ['nome']  # necessário!
-
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    autocomplete_fields = ['categoria']
-```
-- O model relacionado precisa ter `search_fields`.
-
----
-# raw_id_fields
-- Alternativa ao select para ForeignKey com muitos itens;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    raw_id_fields = ['categoria']
-```
-- Exibe campo com ID e botão de busca.
-
----
-# filter_horizontal / filter_vertical
-- Widget melhorado para ManyToMany;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    filter_horizontal = ['tags']
-    # ou
-    filter_vertical = ['tags']
-```
-
----
-# save_model
-- Customiza o que acontece ao salvar;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    def save_model(self, request, obj, form, change):
-        if not change:  # novo objeto
-            obj.criado_por = request.user
-        super().save_model(request, obj, form, change)
-```
-
----
-# get_queryset
-- Customiza a query da listagem;
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        # Apenas produtos da loja do usuário
-        if not request.user.is_superuser:
-            qs = qs.filter(loja=request.user.loja)
-        return qs
-```
-
----
-# Exemplo Completo
-```python
-@admin.register(Produto)
-class ProdutoAdmin(admin.ModelAdmin):
-    # Listagem
-    list_display = ['nome', 'categoria', 'preco', 'ativo']
-    list_filter = ['categoria', 'ativo']
-    search_fields = ['nome', 'descricao']
-    ordering = ['nome']
-
-    # Formulário
-    fieldsets = [
-        (None, {'fields': ['nome', 'slug', 'categoria']}),
-        ('Detalhes', {'fields': ['descricao', 'preco', 'estoque']}),
-        ('Status', {'fields': ['ativo'], 'classes': ['collapse']}),
-    ]
-    prepopulated_fields = {'slug': ('nome',)}
-    readonly_fields = ['data_criacao']
+TINYMCE_DEFAULT_CONFIG = {
+    ...
+    'image_advtab': True,
+    'image_caption': True,
+}
 ```
 
 ---
 # Referências
-- https://docs.djangoproject.com/en/5.1/ref/contrib/admin/
-- https://docs.djangoproject.com/en/5.1/ref/contrib/admin/#modeladmin-options
-- https://docs.djangoproject.com/en/5.1/ref/contrib/admin/#inlinemodeladmin-objects
+- https://docs.djangoproject.com/en/5.1/topics/forms/formsets/
+- https://docs.djangoproject.com/en/5.1/topics/forms/modelforms/#model-formsets
+- https://docs.djangoproject.com/en/5.1/topics/forms/modelforms/#inline-formsets
+- https://django-tinymce.readthedocs.io/
+- https://github.com/summernote/django-summernote
 
 ---
 # <!--fit--> Dúvidas? 🤔

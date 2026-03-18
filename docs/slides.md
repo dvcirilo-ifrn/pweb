@@ -6,8 +6,8 @@
 | #  | Título                                     | Links                                              |
 |:----|:--------------------------------------------|---------------------------------------------------:|
 | 01  | Apresentação da Disciplina                  | [:material-presentation:](aula01.html) - [:material-file-pdf-box:](aula01.pdf) |
-<!--
 | 02  | Conceitos Básicos                           | [:material-presentation:](aula02.html) - [:material-file-pdf-box:](aula02.pdf) |
+<!--
 | 03  | Preparação do Ambiente                      | [:material-presentation:](aula03.html) - [:material-file-pdf-box:](aula03.pdf) |
 | 04  | Desenvolvimento Web com Python/Django       | [:material-presentation:](aula04.html) - [:material-file-pdf-box:](aula04.pdf) |
 | 05  | Apps Django                                 | [:material-presentation:](aula05.html) - [:material-file-pdf-box:](aula05.pdf) |

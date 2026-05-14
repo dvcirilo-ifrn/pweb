@@ -11,9 +11,9 @@
 | 04  | Desenvolvimento Web com Python/Django       | [:material-presentation:](aula04.html) - [:material-file-pdf-box:](aula04.pdf) |
 | 05  | Apps Django                                 | [:material-presentation:](aula05.html) - [:material-file-pdf-box:](aula05.pdf) |
 | 06  | Function-based Views                        | [:material-presentation:](aula06.html) - [:material-file-pdf-box:](aula06.pdf) |
+| 07  | Templates                                   | [:material-presentation:](aula07.html) - [:material-file-pdf-box:](aula07.pdf) |
 <!--
-| 07  | Bootstrap                                   | [:material-presentation:](aula07.html) - [:material-file-pdf-box:](aula07.pdf) |
-| 08  | Templates                                   | [:material-presentation:](aula08.html) - [:material-file-pdf-box:](aula08.pdf) |
+| 08  | Bootstrap                                   | [:material-presentation:](aula08.html) - [:material-file-pdf-box:](aula08.pdf) |
 | 09  | Models                                      | [:material-presentation:](aula09.html) - [:material-file-pdf-box:](aula09.pdf) |
 | 10  | Forms                                       | [:material-presentation:](aula10.html) - [:material-file-pdf-box:](aula10.pdf) |
 | 11  | Sessão/Cookies/Context Processors           | [:material-presentation:](aula11.html) - [:material-file-pdf-box:](aula11.pdf) |

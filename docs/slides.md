@@ -12,12 +12,9 @@
 | 05  | Apps Django                                 | [:material-presentation:](aula05.html) - [:material-file-pdf-box:](aula05.pdf) |
 | 06  | Function-based Views                        | [:material-presentation:](aula06.html) - [:material-file-pdf-box:](aula06.pdf) |
 | 07  | Templates                                   | [:material-presentation:](aula07.html) - [:material-file-pdf-box:](aula07.pdf) |
-<!--
-| 08  | Bootstrap                                   | [:material-presentation:](aula08.html) - [:material-file-pdf-box:](aula08.pdf) |
--->
 | 08  | Models                                      | [:material-presentation:](aula08.html) - [:material-file-pdf-box:](aula08.pdf) |
-<!--
 | 10  | Forms                                       | [:material-presentation:](aula10.html) - [:material-file-pdf-box:](aula10.pdf) |
+<!--
 | 11  | Sessão/Cookies/Context Processors           | [:material-presentation:](aula11.html) - [:material-file-pdf-box:](aula11.pdf) |
 | 12  | Autenticação                                | [:material-presentation:](aula12.html) - [:material-file-pdf-box:](aula12.pdf) |
 | 13  | Autorização                                 | [:material-presentation:](aula13.html) - [:material-file-pdf-box:](aula13.pdf) |
@@ -29,5 +26,6 @@
 | 19  | RichText/Formsets                           | [:material-presentation:](aula19.html) - [:material-file-pdf-box:](aula19.pdf) |
 | 20  | Class-Based Views                           | [:material-presentation:](aula20.html) - [:material-file-pdf-box:](aula20.pdf) |
 | 21  | Customizando o Django Admin                 | [:material-presentation:](aula21.html) - [:material-file-pdf-box:](aula21.pdf) |
+| 08  | Bootstrap                                   | [:material-presentation:](aula08.html) - [:material-file-pdf-box:](aula08.pdf) |
 -->
 

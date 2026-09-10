@@ -4,7 +4,7 @@ size: 4:3
 marp: true
 paginate: true
 _paginate: false
-title: Aula 09: Models
+title: Aula 08: Models
 author: Diego Cirilo
 
 ---
@@ -19,7 +19,7 @@ img {
 
 ### Prof. Diego Cirilo
 
-**Aula 09**: Models
+**Aula 08**: Models
 
 ---
 # Dados do sistema

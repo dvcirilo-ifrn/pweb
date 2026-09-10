@@ -17,15 +17,15 @@
 | 11  | Sessão/Cookies/Context Processors           | [:material-presentation:](aula11.html) - [:material-file-pdf-box:](aula11.pdf) |
 | 12  | Autenticação                                | [:material-presentation:](aula12.html) - [:material-file-pdf-box:](aula12.pdf) |
 | 13  | Autorização                                 | [:material-presentation:](aula13.html) - [:material-file-pdf-box:](aula13.pdf) |
-<!--
 | 14  | Mensagens/Paginação                         | [:material-presentation:](aula14.html) - [:material-file-pdf-box:](aula14.pdf) |
-| 15  | Testes                                      | [:material-presentation:](aula15.html) - [:material-file-pdf-box:](aula15.pdf) |
-| 16  | Introdução ao JavaScript                    | [:material-presentation:](aula16.html) - [:material-file-pdf-box:](aula16.pdf) |
-| 17  | AJAX                                        | [:material-presentation:](aula17.html) - [:material-file-pdf-box:](aula17.pdf) |
+| 15  | Introdução ao JavaScript                    | [:material-presentation:](aula16.html) - [:material-file-pdf-box:](aula16.pdf) |
+| 16  | AJAX                                        | [:material-presentation:](aula17.html) - [:material-file-pdf-box:](aula17.pdf) |
+<!--
 | 18  | Segurança                                   | [:material-presentation:](aula18.html) - [:material-file-pdf-box:](aula18.pdf) |
 | 19  | RichText/Formsets                           | [:material-presentation:](aula19.html) - [:material-file-pdf-box:](aula19.pdf) |
 | 20  | Class-Based Views                           | [:material-presentation:](aula20.html) - [:material-file-pdf-box:](aula20.pdf) |
 | 21  | Customizando o Django Admin                 | [:material-presentation:](aula21.html) - [:material-file-pdf-box:](aula21.pdf) |
+| 15  | Testes                                      | [:material-presentation:](aula15.html) - [:material-file-pdf-box:](aula15.pdf) |
 | 08  | Bootstrap                                   | [:material-presentation:](aula08.html) - [:material-file-pdf-box:](aula08.pdf) |
 -->
 

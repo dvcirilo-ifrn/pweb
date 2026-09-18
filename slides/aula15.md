@@ -49,7 +49,7 @@ img {
     - Executam JavaScript diretamente nos navegadores, oferecendo suporte para aplicações web interativas.
 
 ---
-# JavaScript em PSI
+# JavaScript em PWeb
 - Nessa disciplina utilizaremos o JS no *browser*;
 - Os objetivos são:
     - Melhorar a interface com a manipulação do DOM;

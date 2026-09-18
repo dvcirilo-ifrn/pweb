@@ -18,8 +18,8 @@
 | 12  | Autenticação                                | [:material-presentation:](aula12.html) - [:material-file-pdf-box:](aula12.pdf) |
 | 13  | Autorização                                 | [:material-presentation:](aula13.html) - [:material-file-pdf-box:](aula13.pdf) |
 | 14  | Mensagens/Paginação                         | [:material-presentation:](aula14.html) - [:material-file-pdf-box:](aula14.pdf) |
-| 15  | Introdução ao JavaScript                    | [:material-presentation:](aula16.html) - [:material-file-pdf-box:](aula16.pdf) |
-| 16  | AJAX                                        | [:material-presentation:](aula17.html) - [:material-file-pdf-box:](aula17.pdf) |
+| 15  | Introdução ao JavaScript                    | [:material-presentation:](aula15.html) - [:material-file-pdf-box:](aula15.pdf) |
+| 16  | AJAX                                        | [:material-presentation:](aula16.html) - [:material-file-pdf-box:](aula16.pdf) |
 <!--
 | 18  | Segurança                                   | [:material-presentation:](aula18.html) - [:material-file-pdf-box:](aula18.pdf) |
 | 19  | RichText/Formsets                           | [:material-presentation:](aula19.html) - [:material-file-pdf-box:](aula19.pdf) |
